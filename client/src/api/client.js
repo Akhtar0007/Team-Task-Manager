@@ -52,6 +52,26 @@ export const tasks = {
   watchStatus: (id) => api.get(`/tasks/${id}/watch`),
 };
 
+export const issues = {
+  getByProject: (projectId, params) => api.get(`/issues/project/${projectId}`, { params }),
+  getById: (id) => api.get(`/issues/${id}`),
+  create: (projectId, data) => api.post(`/issues/project/${projectId}`, data),
+  update: (id, data) => api.put(`/issues/${id}`, data),
+  delete: (id) => api.delete(`/issues/${id}`),
+  kanban: (projectId) => api.get(`/issues/kanban/${projectId}`),
+};
+
+export const phases = {
+  getByProject: (projectId) => api.get(`/phases/project/${projectId}`),
+  create: (projectId, data) => api.post(`/phases/project/${projectId}`, data),
+  update: (id, data) => api.put(`/phases/${id}`, data),
+  delete: (id) => api.delete(`/phases/${id}`),
+};
+
+export const timesheets = {
+  getMy: (params) => api.get('/timesheets/my', { params }),
+};
+
 export const comments = {
   getByTask: (taskId) => api.get(`/comments/task/${taskId}`),
   create: (taskId, data) => api.post(`/comments/task/${taskId}`, data),

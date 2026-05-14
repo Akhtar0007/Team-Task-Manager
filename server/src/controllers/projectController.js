@@ -86,7 +86,15 @@ const getById = async (req, res, next) => {
           },
           orderBy: { createdAt: 'desc' }
         },
-        labels: { orderBy: { name: 'asc' } }
+        labels: { orderBy: { name: 'asc' } },
+        phases: { orderBy: { startDate: 'asc' } },
+        issues: {
+          include: {
+            assignee: { select: { id: true, name: true } },
+            reporter: { select: { id: true, name: true } }
+          },
+          orderBy: { createdAt: 'desc' }
+        }
       }
     });
 

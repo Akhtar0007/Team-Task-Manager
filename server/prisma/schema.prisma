@@ -31,6 +31,27 @@ enum Priority {
   URGENT
 }
 
+enum IssueStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  REOPENED
+  CLOSED
+}
+
+enum Severity {
+  CRITICAL
+  MAJOR
+  MINOR
+  TRIVIAL
+}
+
+enum PhaseStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
 model User {
   id        String    @id @default(cuid())
   name      String
@@ -50,6 +71,8 @@ model User {
   notifications  Notification[]
   timeEntries    TimeEntry[]
   watchedTasks   TaskWatcher[]
+  reportedIssues  Issue[] @relation("IssueReporter")
+  assignedIssues  Issue[] @relation("IssueAssignee")
 }
 
 model Project {
@@ -64,6 +87,8 @@ model Project {
   labels    Label[]
   members   ProjectMember[]
   tasks     Task[]
+  phases    Phase[]
+  issues    Issue[]
 }
 
 model ProjectMember {
@@ -230,4 +255,37 @@ model TaskWatcher {
   user   User @relation(fields: [userId], references: [id])
 
   @@unique([taskId, userId])
+}
+
+model Phase {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  startDate   DateTime?
+  endDate     DateTime?
+  status      PhaseStatus @default(PLANNED)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  projectId String
+  project   Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+}
+
+model Issue {
+  id          String      @id @default(cuid())
+  title       String
+  description String?
+  status      IssueStatus @default(OPEN)
+  priority    Priority    @default(MEDIUM)
+  severity    Severity    @default(MAJOR)
+  dueDate     DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  projectId  String
+  project    Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  assigneeId String?
+  assignee   User?   @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  reporterId String
+  reporter   User   @relation("IssueReporter", fields: [reporterId], references: [id])
 }

@@ -13,6 +13,9 @@ const subtaskRoutes = require('./routes/subtaskRoutes');
 const labelRoutes = require('./routes/labelRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
 const timeRoutes = require('./routes/timeRoutes');
+const issueRoutes = require('./routes/issueRoutes');
+const phaseRoutes = require('./routes/phaseRoutes');
+const timesheetRoutes = require('./routes/timesheetRoutes');
 const errorHandler = require('./utils/errorHandler');
 
 const app = express();
@@ -32,6 +35,9 @@ app.use('/api/subtasks', subtaskRoutes);
 app.use('/api/labels', labelRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/time', timeRoutes);
+app.use('/api/issues', issueRoutes);
+app.use('/api/phases', phaseRoutes);
+app.use('/api/timesheets', timesheetRoutes);
 
 const uploadsDir = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsDir));

@@ -35,8 +35,11 @@ export default function Layout({ children }) {
                 <Link to="/my-tasks" className={linkClass('/my-tasks')}>
                   My Tasks
                 </Link>
-                <Link to="/projects" className={isActive('/projects') ? 'px-3 py-2 rounded-md text-sm font-medium bg-indigo-700' : 'px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500'}>
+                <Link to="/projects" className={isActive('/projects') && !location.pathname.includes('/issues') ? 'px-3 py-2 rounded-md text-sm font-medium bg-indigo-700' : 'px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500'}>
                   Projects
+                </Link>
+                <Link to="/timesheets" className={linkClass('/timesheets')}>
+                  Timesheets
                 </Link>
                 {user?.role === 'SUPER_ADMIN' && (
                   <Link to="/users" className={linkClass('/users')}>

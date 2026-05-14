@@ -231,6 +231,12 @@ export default function ProjectDetail() {
           >
             Board
           </button>
+          <button
+            onClick={() => navigate(`/projects/${id}/issues`)}
+            className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Issues ({project.issues?.length || 0})
+          </button>
           {isAdmin && (
             <button onClick={handleDeleteProject} className="text-red-600 text-sm hover:underline">Delete Project</button>
           )}
@@ -539,8 +545,35 @@ export default function ProjectDetail() {
           )}
         </div>
 
-        {/* Sidebar - Members */}
-        <div>
+        {/* Sidebar - Phases & Members */}
+        <div className="space-y-6">
+          {/* Phases */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">Phases ({project.phases?.length || 0})</h2>
+            {project.phases?.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No phases defined</p>
+            ) : (
+              <div className="space-y-3">
+                {project.phases.map(phase => (
+                  <div key={phase.id} className="border-l-4 border-indigo-400 pl-3">
+                    <p className="text-sm font-medium text-gray-700">{phase.name}</p>
+                    {phase.description && <p className="text-xs text-gray-500">{phase.description}</p>}
+                    <div className="flex items-center space-x-2 mt-1">
+                      <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+                        phase.status === 'COMPLETED' ? 'bg-green-100 text-green-700' :
+                        phase.status === 'ACTIVE' ? 'bg-indigo-100 text-indigo-700' :
+                        'bg-gray-100 text-gray-600'
+                      }`}>{phase.status}</span>
+                      {phase.startDate && <span className="text-xs text-gray-400">{new Date(phase.startDate).toLocaleDateString()}</span>}
+                      {phase.endDate && <span className="text-xs text-gray-400">→ {new Date(phase.endDate).toLocaleDateString()}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Members */}
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-800">Members ({project.members.length})</h2>
