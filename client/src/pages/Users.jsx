@@ -80,7 +80,9 @@ export default function Users() {
                 <td className="px-6 py-4 text-sm text-gray-500">{u.email}</td>
                 <td className="px-6 py-4">
                   <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
-                    u.role === 'SUPER_ADMIN' ? 'bg-yellow-100 text-yellow-800' : 'bg-gray-100 text-gray-600'
+                    u.role === 'SUPER_ADMIN' ? 'bg-yellow-100 text-yellow-800' :
+                    u.role === 'ADMIN' ? 'bg-green-100 text-green-800' :
+                    'bg-gray-100 text-gray-600'
                   }`}>{u.role}</span>
                 </td>
                 <td className="px-6 py-4 text-sm text-gray-500 text-center">
@@ -99,6 +101,7 @@ export default function Users() {
                         className="px-2 py-1 border border-gray-300 rounded text-xs focus:outline-none focus:ring-1 focus:ring-indigo-500"
                       >
                         <option value="MEMBER">Member</option>
+                        <option value="ADMIN">Admin</option>
                         <option value="SUPER_ADMIN">Super Admin</option>
                       </select>
                       {u.role !== 'SUPER_ADMIN' && (

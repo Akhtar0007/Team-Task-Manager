@@ -20,7 +20,7 @@ const getAll = async (req, res, next) => {
 const updateRole = async (req, res, next) => {
   try {
     const { role } = req.body;
-    if (!['MEMBER', 'SUPER_ADMIN'].includes(role)) {
+    if (!['MEMBER', 'ADMIN', 'SUPER_ADMIN'].includes(role)) {
       return res.status(400).json({ error: 'Invalid role' });
     }
 
