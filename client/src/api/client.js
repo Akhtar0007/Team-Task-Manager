@@ -43,6 +43,36 @@ export const tasks = {
   create: (projectId, data) => api.post(`/tasks/project/${projectId}`, data),
   update: (id, data) => api.put(`/tasks/${id}`, data),
   delete: (id) => api.delete(`/tasks/${id}`),
+  getById: (id) => api.get(`/tasks/${id}`),
+  search: (params) => api.get('/tasks/search', { params }),
+  kanban: (projectId) => api.get(`/tasks/kanban/${projectId}`),
+};
+
+export const comments = {
+  getByTask: (taskId) => api.get(`/comments/task/${taskId}`),
+  create: (taskId, data) => api.post(`/comments/task/${taskId}`, data),
+  delete: (id) => api.delete(`/comments/${id}`),
+};
+
+export const subtasks = {
+  getByTask: (taskId) => api.get(`/subtasks/task/${taskId}`),
+  create: (taskId, data) => api.post(`/subtasks/task/${taskId}`, data),
+  toggle: (id) => api.patch(`/subtasks/${id}/toggle`),
+  delete: (id) => api.delete(`/subtasks/${id}`),
+};
+
+export const labels = {
+  getByProject: (projectId) => api.get(`/labels/project/${projectId}`),
+  create: (projectId, data) => api.post(`/labels/project/${projectId}`, data),
+  delete: (id) => api.delete(`/labels/${id}`),
+  addToTask: (taskId, labelId) => api.post(`/labels/task/${taskId}`, { labelId }),
+  removeFromTask: (taskId, labelId) => api.delete(`/labels/task/${taskId}/label/${labelId}`),
+};
+
+export const notifications = {
+  getMy: () => api.get('/notifications'),
+  markRead: (id) => api.patch(`/notifications/${id}/read`),
+  markAllRead: () => api.patch('/notifications/read-all'),
 };
 
 export const dashboard = {

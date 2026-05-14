@@ -39,6 +39,7 @@ export default function Dashboard() {
   const statusColor = {
     TODO: 'bg-yellow-100 text-yellow-800',
     IN_PROGRESS: 'bg-indigo-100 text-indigo-800',
+    REVIEW: 'bg-orange-100 text-orange-800',
     DONE: 'bg-green-100 text-green-800',
   };
 
@@ -46,6 +47,7 @@ export default function Dashboard() {
     { label: 'Total Tasks', value: stats.totalTasks, color: 'bg-blue-500' },
     { label: 'To Do', value: stats.tasksByStatus.TODO, color: 'bg-yellow-500' },
     { label: 'In Progress', value: stats.tasksByStatus.IN_PROGRESS, color: 'bg-indigo-500' },
+    { label: 'Review', value: stats.tasksByStatus.REVIEW, color: 'bg-orange-500' },
     { label: 'Completed', value: stats.tasksByStatus.DONE, color: 'bg-green-500' },
     { label: 'Overdue', value: stats.overdueCount, color: 'bg-red-500' },
     { label: 'My Tasks', value: stats.myTaskCount, color: 'bg-purple-500' },

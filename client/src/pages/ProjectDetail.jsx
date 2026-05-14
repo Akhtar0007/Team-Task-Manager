@@ -1,14 +1,18 @@
 import { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { projects, tasks, filesApi } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import TaskComments from '../components/TaskComments';
+import TaskChecklist from '../components/TaskChecklist';
+import LabelPicker from '../components/LabelPicker';
 
-const statusOptions = ['TODO', 'IN_PROGRESS', 'DONE'];
+const statusOptions = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
 const priorityOptions = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
 
 const statusBadge = {
   TODO: 'bg-yellow-100 text-yellow-800',
   IN_PROGRESS: 'bg-indigo-100 text-indigo-800',
+  REVIEW: 'bg-orange-100 text-orange-800',
   DONE: 'bg-green-100 text-green-800',
 };
 
@@ -22,6 +26,7 @@ const priorityBadge = {
 export default function ProjectDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const [project, setProject] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -36,7 +41,17 @@ export default function ProjectDetail() {
   const [memberEmail, setMemberEmail] = useState('');
   const [memberRole, setMemberRole] = useState('MEMBER');
 
-  const [editingTask, setEditingTask] = useState(null);
+  const [editTaskId, setEditTaskId] = useState(null);
+  const [editStatus, setEditStatus] = useState('');
+
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState(null);
+  const [searching, setSearching] = useState(false);
+  const [filterPriority, setFilterPriority] = useState('');
+  const [filterAssignee, setFilterAssignee] = useState('');
+  const [filterStatus, setFilterStatus] = useState('');
+
+  const [expandedTask, setExpandedTask] = useState(searchParams.get('task') || null);
 
   const fetchProject = async () => {
     try {
@@ -136,6 +151,38 @@ export default function ProjectDetail() {
     }
   };
 
+  const handleSearch = async () => {
+    if (!searchQuery.trim() && !filterPriority && !filterAssignee && !filterStatus) {
+      setSearchResults(null);
+      return;
+    }
+    setSearching(true);
+    try {
+      const params = {};
+      if (searchQuery.trim()) params.q = searchQuery.trim();
+      if (filterPriority) params.priority = filterPriority;
+      if (filterAssignee) params.assigneeId = filterAssignee;
+      if (filterStatus) params.status = filterStatus;
+      const { data } = await tasks.search({ projectId: id, ...params });
+      setSearchResults(data);
+    } catch (err) {
+      alert('Search failed');
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  useEffect(() => {
+    if (searchQuery || filterPriority || filterAssignee || filterStatus) {
+      handleSearch();
+    } else {
+      setSearchResults(null);
+    }
+  }, [searchQuery, filterPriority, filterAssignee, filterStatus]);
+
+  const getTaskCountByStatus = (status) =>
+    project?.tasks.filter(t => t.status === status).length || 0;
+
   if (loading) {
     return (
       <div className="flex justify-center py-20">
@@ -152,6 +199,8 @@ export default function ProjectDetail() {
     return <div className="text-gray-500 text-center py-10">Project not found</div>;
   }
 
+  const displayedTasks = searchResults || project.tasks;
+
   return (
     <div>
       <div className="flex items-center justify-between mb-6">
@@ -161,6 +210,12 @@ export default function ProjectDetail() {
           {project.description && <p className="text-gray-500 mt-1">{project.description}</p>}
         </div>
         <div className="flex items-center space-x-3">
+          <button
+            onClick={() => navigate(`/projects/${id}/kanban`)}
+            className="bg-white border border-gray-300 text-gray-700 px-3 py-1.5 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          >
+            Board
+          </button>
           {isAdmin && (
             <button onClick={handleDeleteProject} className="text-red-600 text-sm hover:underline">Delete Project</button>
           )}
@@ -169,8 +224,47 @@ export default function ProjectDetail() {
 
       <div className="grid lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2">
+          {/* Search & Filter */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-3 mb-4">
+            <div className="flex flex-wrap gap-2">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search tasks..."
+                className="flex-1 min-w-[200px] px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                <option value="">All status</option>
+                {statusOptions.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+              </select>
+              <select value={filterPriority} onChange={e => setFilterPriority(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                <option value="">All priority</option>
+                {priorityOptions.map(p => <option key={p} value={p}>{p}</option>)}
+              </select>
+              <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
+                <option value="">All members</option>
+                {project.members.map(m => (
+                  <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Status Summary */}
+          <div className="flex space-x-2 mb-4">
+            {statusOptions.map(s => (
+              <div key={s} className={`flex-1 text-center px-2 py-1.5 rounded-lg text-xs font-medium ${statusBadge[s]}`}>
+                {s.replace('_', ' ')}: {getTaskCountByStatus(s)}
+              </div>
+            ))}
+          </div>
+
           <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-800">Tasks ({project.tasks.length})</h2>
+            <h2 className="text-lg font-semibold text-gray-800">
+              Tasks ({displayedTasks.length})
+              {searchResults && <span className="text-sm font-normal text-gray-400 ml-2">(filtered)</span>}
+            </h2>
             {isAdmin && (
               <button
                 onClick={() => setShowTaskForm(true)}
@@ -233,17 +327,20 @@ export default function ProjectDetail() {
             </form>
           )}
 
-          {project.tasks.length === 0 ? (
+          {displayedTasks.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-xl border border-gray-100">
-              <p className="text-gray-400">No tasks yet</p>
+              <p className="text-gray-400">{searchResults ? 'No tasks match your filters' : 'No tasks yet'}</p>
             </div>
           ) : (
             <div className="space-y-3">
-              {project.tasks.map(task => (
+              {displayedTasks.map(task => (
                 <div key={task.id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-4">
                   <div className="flex items-start justify-between">
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2">
+                        <button onClick={() => setExpandedTask(expandedTask === task.id ? null : task.id)} className="text-gray-400 hover:text-gray-600 text-xs">
+                          {expandedTask === task.id ? '▼' : '▶'}
+                        </button>
                         <h3 className="font-medium text-gray-800">{task.title}</h3>
                         <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${statusBadge[task.status]}`}>
                           {task.status.replace('_', ' ')}
@@ -252,69 +349,144 @@ export default function ProjectDetail() {
                           {task.priority}
                         </span>
                       </div>
-                      {task.description && <p className="text-sm text-gray-500 mt-1">{task.description}</p>}
-                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-400">
-                        {task.assignee && <span>Assigned to: <span className="font-medium">{task.assignee.name}</span></span>}
-                        {task.dueDate && <span>Due: {new Date(task.dueDate).toLocaleDateString()}</span>}
-                        <span>Created by: {task.createdBy.name}</span>
-                      </div>
 
-                      {task.files && task.files.length > 0 && (
-                        <div className="mt-3 pt-3 border-t border-gray-100">
-                          <p className="text-xs font-medium text-gray-500 mb-2">Attachments</p>
-                          <div className="space-y-1">
-                            {task.files.map(file => (
-                              <div key={file.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
-                                <a
-                                  href={`/uploads/${file.path}`}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-indigo-600 hover:underline truncate"
-                                >
-                                  {file.name}
-                                </a>
-                                <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
-                                  <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)}KB</span>
-                                  {isAdmin && (
-                                    <button onClick={() => handleDeleteFile(file.id)} className="text-red-500 text-xs hover:underline">Del</button>
-                                  )}
-                                </div>
-                              </div>
-                            ))}
+                      {/* Task Labels */}
+                      {task.labels?.length > 0 && (
+                        <div className="flex flex-wrap gap-1 mt-1 ml-5">
+                          {task.labels.map(tl => (
+                            <span
+                              key={tl.label.id}
+                              className="px-1.5 py-0.5 rounded text-xs text-white"
+                              style={{ backgroundColor: tl.label.color }}
+                            >
+                              {tl.label.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {task.description && <p className="text-sm text-gray-500 mt-1 ml-5">{task.description}</p>}
+
+                      {/* Subtask Progress */}
+                      {task.subtasks?.length > 0 && (
+                        <div className="ml-5 mt-1">
+                          <div className="flex items-center text-xs text-gray-400">
+                            <span>Checklist: {task.subtasks.filter(s => s.completed).length}/{task.subtasks.length}</span>
+                            <div className="ml-2 flex-1 max-w-[100px] bg-gray-200 rounded-full h-1.5">
+                              <div className="bg-green-500 h-1.5 rounded-full" style={{ width: `${(task.subtasks.filter(s => s.completed).length / task.subtasks.length) * 100}%` }} />
+                            </div>
                           </div>
                         </div>
                       )}
 
-                      <div className="mt-2">
-                          <label className="cursor-pointer text-xs text-indigo-600 hover:underline">
-                            + Attach file
-                            <input
-                              type="file"
-                              className="hidden"
-                              onChange={e => {
-                                if (e.target.files[0]) {
-                                  handleFileUpload(task.id, e.target.files[0]);
-                                  e.target.value = '';
-                                }
-                              }}
-                            />
-                          </label>
-                        </div>
+                      <div className="flex items-center space-x-4 mt-2 text-xs text-gray-400 ml-5">
+                        {task.assignee && <span>Assigned to: <span className="font-medium">{task.assignee.name}</span></span>}
+                        {task.dueDate && (
+                          <span className={new Date(task.dueDate) < new Date() && task.status !== 'DONE' ? 'text-red-500 font-medium' : ''}>
+                            Due: {new Date(task.dueDate).toLocaleDateString()}
+                          </span>
+                        )}
+                        <span>Created by: {task.createdBy.name}</span>
                       </div>
+
+                      {/* Expanded Content */}
+                      {expandedTask === task.id && (
+                        <div className="ml-5">
+                          {/* Checklist */}
+                          <TaskChecklist
+                            taskId={task.id}
+                            subtasksList={task.subtasks || []}
+                            onRefresh={fetchProject}
+                          />
+
+                          {/* Labels */}
+                          {project.labels && (
+                            <LabelPicker
+                              projectId={id}
+                              taskId={task.id}
+                              taskLabels={task.labels || []}
+                              projectLabels={project.labels}
+                              onRefresh={fetchProject}
+                            />
+                          )}
+
+                          {/* Files */}
+                          {task.files && task.files.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-gray-100">
+                              <p className="text-xs font-medium text-gray-500 mb-2">Attachments</p>
+                              <div className="space-y-1">
+                                {task.files.map(file => (
+                                  <div key={file.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
+                                    <a
+                                      href={`/uploads/${file.path}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-xs text-indigo-600 hover:underline truncate"
+                                    >
+                                      {file.name}
+                                    </a>
+                                    <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                                      <span className="text-xs text-gray-400">{(file.size / 1024).toFixed(0)}KB</span>
+                                      {isAdmin && (
+                                        <button onClick={() => handleDeleteFile(file.id)} className="text-red-500 text-xs hover:underline">Del</button>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="mt-2">
+                            <label className="cursor-pointer text-xs text-indigo-600 hover:underline">
+                              + Attach file
+                              <input
+                                type="file"
+                                className="hidden"
+                                onChange={e => {
+                                  if (e.target.files[0]) {
+                                    handleFileUpload(task.id, e.target.files[0]);
+                                    e.target.value = '';
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {/* Comments */}
+                          <TaskComments
+                            taskId={task.id}
+                            commentsList={task.comments || []}
+                            onRefresh={fetchProject}
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
                     <div className="flex items-center space-x-2 ml-4 flex-shrink-0">
-                      {editingTask === task.id ? (
+                      {editTaskId === task.id ? (
                         <select
-                          value={task.status}
+                          value={editStatus}
                           onChange={e => {
                             handleUpdateTask(task.id, { title: task.title, status: e.target.value });
-                            setEditingTask(null);
+                            setEditTaskId(null);
                           }}
                           className="px-2 py-1 border border-gray-300 rounded text-sm"
+                          autoFocus
                         >
                           {statusOptions.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
                         </select>
                       ) : (
-                        <button onClick={() => setEditingTask(task.id)} className="text-indigo-600 text-sm hover:underline">Update</button>
+                        <button
+                          onClick={() => {
+                            setEditTaskId(task.id);
+                            setEditStatus(task.status);
+                          }}
+                          className="text-indigo-600 text-sm hover:underline"
+                        >
+                          Update
+                        </button>
                       )}
                       {isAdmin && (
                         <button onClick={() => handleDeleteTask(task.id)} className="text-red-500 text-sm hover:underline">Delete</button>
@@ -327,6 +499,7 @@ export default function ProjectDetail() {
           )}
         </div>
 
+        {/* Sidebar - Members */}
         <div>
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">

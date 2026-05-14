@@ -8,6 +8,10 @@ const dashboardRoutes = require('./routes/dashboardRoutes');
 const fileRoutes = require('./routes/fileRoutes');
 const userRoutes = require('./routes/userRoutes');
 const activityRoutes = require('./routes/activityRoutes');
+const commentRoutes = require('./routes/commentRoutes');
+const subtaskRoutes = require('./routes/subtaskRoutes');
+const labelRoutes = require('./routes/labelRoutes');
+const notificationRoutes = require('./routes/notificationRoutes');
 const errorHandler = require('./utils/errorHandler');
 
 const app = express();
@@ -22,6 +26,10 @@ app.use('/api/dashboard', dashboardRoutes);
 app.use('/api/files', fileRoutes);
 app.use('/api/users', userRoutes);
 app.use('/api/activities', activityRoutes);
+app.use('/api/comments', commentRoutes);
+app.use('/api/subtasks', subtaskRoutes);
+app.use('/api/labels', labelRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 const uploadsDir = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsDir));

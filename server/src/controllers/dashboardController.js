@@ -34,6 +34,7 @@ const getStats = async (req, res, next) => {
     const tasksByStatus = {
       TODO: tasks.filter(t => t.status === 'TODO').length,
       IN_PROGRESS: tasks.filter(t => t.status === 'IN_PROGRESS').length,
+      REVIEW: tasks.filter(t => t.status === 'REVIEW').length,
       DONE: tasks.filter(t => t.status === 'DONE').length
     };
 

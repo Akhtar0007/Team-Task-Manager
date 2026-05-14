@@ -1,11 +1,15 @@
 const { Router } = require('express');
 const { body } = require('express-validator');
 const authenticate = require('../middleware/auth');
-const { create, update, remove } = require('../controllers/taskController');
+const { create, update, remove, search, kanban, getById } = require('../controllers/taskController');
 
 const router = Router();
 
 router.use(authenticate);
+
+router.get('/search', search);
+router.get('/kanban/:projectId', kanban);
+router.get('/:id', getById);
 
 router.post(
   '/project/:projectId',

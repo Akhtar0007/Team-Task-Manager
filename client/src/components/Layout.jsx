@@ -1,5 +1,6 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import NotificationsDropdown from './NotificationsDropdown';
 
 export default function Layout({ children }) {
   const { user, logout } = useAuth();
@@ -16,6 +17,8 @@ export default function Layout({ children }) {
       location.pathname === path ? 'bg-indigo-700' : 'hover:bg-indigo-500'
     }`;
 
+  const isActive = (path) => location.pathname.startsWith(path);
+
   return (
     <div className="min-h-screen bg-gray-50">
       <nav className="bg-indigo-600 text-white shadow-lg">
@@ -29,7 +32,7 @@ export default function Layout({ children }) {
                 <Link to="/dashboard" className={linkClass('/dashboard')}>
                   Dashboard
                 </Link>
-                <Link to="/projects" className={linkClass('/projects')}>
+                <Link to="/projects" className={isActive('/projects') ? 'px-3 py-2 rounded-md text-sm font-medium bg-indigo-700' : 'px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500'}>
                   Projects
                 </Link>
                 {user?.role === 'SUPER_ADMIN' && (
@@ -40,10 +43,14 @@ export default function Layout({ children }) {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <NotificationsDropdown />
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-indigo-200">{user?.name}</span>
                 {user?.role === 'SUPER_ADMIN' && (
                   <span className="px-2 py-0.5 text-xs font-bold bg-yellow-400 text-yellow-900 rounded-full">SUPER ADMIN</span>
+                )}
+                {user?.role === 'ADMIN' && (
+                  <span className="px-2 py-0.5 text-xs font-bold bg-green-400 text-green-900 rounded-full">ADMIN</span>
                 )}
               </div>
               <button

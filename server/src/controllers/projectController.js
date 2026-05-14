@@ -67,10 +67,19 @@ const getById = async (req, res, next) => {
             files: {
               include: { uploadedBy: { select: { id: true, name: true } } },
               orderBy: { createdAt: 'desc' }
+            },
+            comments: {
+              include: { user: { select: { id: true, name: true } } },
+              orderBy: { createdAt: 'asc' }
+            },
+            subtasks: { orderBy: { createdAt: 'asc' } },
+            labels: {
+              include: { label: true }
             }
           },
           orderBy: { createdAt: 'desc' }
-        }
+        },
+        labels: { orderBy: { name: 'asc' } }
       }
     });
 

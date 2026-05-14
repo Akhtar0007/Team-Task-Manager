@@ -7,6 +7,7 @@ import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Projects from './pages/Projects';
 import ProjectDetail from './pages/ProjectDetail';
+import KanbanBoard from './pages/KanbanBoard';
 import Users from './pages/Users';
 
 function GuestRoute({ children }) {
@@ -24,6 +25,7 @@ export default function App() {
       <Route path="/dashboard" element={<ProtectedRoute><Layout><Dashboard /></Layout></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute><Layout><Projects /></Layout></ProtectedRoute>} />
       <Route path="/projects/:id" element={<ProtectedRoute><Layout><ProjectDetail /></Layout></ProtectedRoute>} />
+      <Route path="/projects/:id/kanban" element={<ProtectedRoute><Layout><KanbanBoard /></Layout></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Layout><Users /></Layout></ProtectedRoute>} />
     </Routes>
   );

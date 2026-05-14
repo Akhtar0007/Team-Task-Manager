@@ -20,6 +20,7 @@ enum Role {
 enum TaskStatus {
   TODO
   IN_PROGRESS
+  REVIEW
   DONE
 }
 
@@ -45,6 +46,8 @@ model User {
   uploadedFiles  TaskFile[]
   ownedProjects  Project[]
   activityLogs   ActivityLog[]
+  comments       TaskComment[]
+  notifications  Notification[]
 }
 
 model Project {
@@ -56,6 +59,7 @@ model Project {
 
   createdBy String
   creator   User            @relation(fields: [createdBy], references: [id])
+  labels    Label[]
   members   ProjectMember[]
   tasks     Task[]
 }
@@ -90,7 +94,13 @@ model Task {
   createdById String
   createdBy  User   @relation("TaskCreator", fields: [createdById], references: [id])
 
-  files TaskFile[]
+  files     TaskFile[]
+  comments  TaskComment[]
+  subtasks  SubTask[]
+  labels    TaskLabel[]
+  notifications Notification[]
+  dependents  TaskDependency[] @relation("TaskDependent")
+  dependsOn   TaskDependency[] @relation("TaskDependsOn")
 }
 
 model TaskFile {
@@ -119,4 +129,76 @@ model ActivityLog {
   user   User   @relation(fields: [userId], references: [id])
 
   @@index([createdAt])
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId String
+  task   Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId String
+  user   User @relation(fields: [userId], references: [id])
+}
+
+model SubTask {
+  id        String   @id @default(cuid())
+  title     String
+  completed Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId     String
+  task       Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+}
+
+model Label {
+  id        String   @id @default(cuid())
+  name      String
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
+
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tasks     TaskLabel[]
+
+  @@unique([name, projectId])
+}
+
+model TaskLabel {
+  taskId  String
+  task    Task  @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  labelId String
+  label   Label @relation(fields: [labelId], references: [id], onDelete: Cascade)
+
+  @@id([taskId, labelId])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  type      String
+  message   String
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+  taskId String?
+  task   Task?  @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, read])
+  @@index([createdAt])
+}
+
+model TaskDependency {
+  id          String @id @default(cuid())
+  dependentId String
+  dependsOnId String
+
+  dependent Task @relation("TaskDependent", fields: [dependentId], references: [id], onDelete: Cascade)
+  dependsOn Task @relation("TaskDependsOn", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([dependentId, dependsOnId])
 }

@@ -9,6 +9,14 @@ const taskIncludes = {
   files: {
     include: { uploadedBy: { select: { id: true, name: true } } },
     orderBy: { createdAt: 'desc' }
+  },
+  comments: {
+    include: { user: { select: { id: true, name: true } } },
+    orderBy: { createdAt: 'asc' }
+  },
+  subtasks: { orderBy: { createdAt: 'asc' } },
+  labels: {
+    include: { label: true }
   }
 };
 
@@ -45,6 +53,17 @@ const create = async (req, res, next) => {
       },
       include: taskIncludes
     });
+
+    if (assigneeId && assigneeId !== req.user.id) {
+      await prisma.notification.create({
+        data: {
+          type: 'TASK_ASSIGNED',
+          message: `You were assigned to "${title}"`,
+          userId: assigneeId,
+          taskId: task.id
+        }
+      });
+    }
 
     res.status(201).json(task);
     await logActivity(req.user.id, 'CREATE', 'Task', task.id, `Created task "${task.title}"`);
@@ -87,10 +106,22 @@ const update = async (req, res, next) => {
       include: taskIncludes
     });
 
+    if (assigneeId && assigneeId !== task.assigneeId && assigneeId !== req.user.id) {
+      await prisma.notification.create({
+        data: {
+          type: 'TASK_ASSIGNED',
+          message: `You were assigned to "${updated.title}"`,
+          userId: assigneeId,
+          taskId: updated.id
+        }
+      });
+    }
+
     res.json(updated);
     const changes = [];
     if (st && st !== task.status) changes.push(`status → ${st}`);
     if (title && title !== task.title) changes.push('title changed');
+    if (assigneeId && assigneeId !== task.assigneeId) changes.push('assignee changed');
     await logActivity(req.user.id, 'UPDATE', 'Task', task.id, `Updated task "${updated.title}"${changes.length ? ': ' + changes.join(', ') : ''}`);
   } catch (error) {
     next(error);
@@ -119,4 +150,96 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { create, update, remove };
+const search = async (req, res, next) => {
+  try {
+    const { projectId, q, status, priority, assigneeId, labelId } = req.query;
+
+    const where = { projectId };
+
+    if (q) where.title = { contains: q, mode: 'insensitive' };
+    if (status) where.status = status;
+    if (priority) where.priority = priority;
+    if (assigneeId) where.assigneeId = assigneeId;
+    if (labelId) {
+      where.labels = { some: { labelId } };
+    }
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const membership = await prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId, userId: req.user.id } }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where,
+      include: taskIncludes,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    res.json(tasks);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const kanban = async (req, res, next) => {
+  try {
+    const { projectId } = req.params;
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const membership = await prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId, userId: req.user.id } }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
+    }
+
+    const tasks = await prisma.task.findMany({
+      where: { projectId },
+      include: taskIncludes,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    const columns = {
+      TODO: [],
+      IN_PROGRESS: [],
+      REVIEW: [],
+      DONE: []
+    };
+
+    tasks.forEach(task => {
+      if (columns[task.status]) {
+        columns[task.status].push(task);
+      } else {
+        columns.TODO.push(task);
+      }
+    });
+
+    res.json(columns);
+  } catch (error) {
+    next(error);
+  }
+};
+
+const getById = async (req, res, next) => {
+  try {
+    const task = await prisma.task.findUnique({
+      where: { id: req.params.id },
+      include: taskIncludes
+    });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const membership = await prisma.projectMember.findUnique({
+        where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
+    }
+
+    res.json(task);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { create, update, remove, search, kanban, getById };
