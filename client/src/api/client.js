@@ -30,6 +30,7 @@ export const auth = {
 };
 
 export const projects = {
+  search: (q) => api.get(`/users/search`, { params: { q } }),
   getAll: () => api.get('/projects'),
   getById: (id) => api.get(`/projects/${id}`),
   create: (data) => api.post('/projects', data),
@@ -110,9 +111,29 @@ export const dashboard = {
 };
 
 export const users = {
+  search: (q) => api.get(`/users/search`, { params: { q } }),
   getAll: () => api.get('/users'),
   updateRole: (id, data) => api.patch(`/users/${id}/role`, data),
   remove: (id) => api.delete(`/users/${id}`),
+};
+
+export const projectDocuments = {
+  upload: (projectId, files) => {
+    const formData = new FormData();
+    Array.from(files).forEach(f => formData.append('files', f));
+    return api.post(`/documents/project/${projectId}`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
+  getByProject: (projectId) => api.get(`/documents/project/${projectId}`),
+  delete: (documentId) => api.delete(`/documents/${documentId}`),
+};
+
+export const resourceLinks = {
+  create: (data) => api.post('/links', data),
+  getByProject: (projectId) => api.get(`/links/project/${projectId}`),
+  getByTask: (taskId) => api.get(`/links/task/${taskId}`),
+  delete: (linkId) => api.delete(`/links/${linkId}`),
 };
 
 export const filesApi = {
@@ -123,7 +144,28 @@ export const filesApi = {
       headers: { 'Content-Type': 'multipart/form-data' }
     });
   },
+  uploadMultiple: (taskId, files) => {
+    const formData = new FormData();
+    Array.from(files).forEach(f => formData.append('files', f));
+    return api.post(`/files/task/${taskId}/multiple`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+  },
   delete: (fileId) => api.delete(`/files/${fileId}`),
 };
 
 export default api;
+
+export const chat = {
+  send: (data) => api.post('/chat', data),
+  getByProject: (projectId, since) => api.get(`/chat/project/${projectId}`, { params: { since } }),
+  getByTask: (taskId, since) => api.get(`/chat/task/${taskId}`, { params: { since } }),
+  getGlobal: (since) => api.get('/chat/global', { params: { since } }),
+};
+
+export const dm = {
+  getConversations: () => api.get('/dm/conversations'),
+  startOrGetConversation: (participantId) => api.post('/dm/conversations', { participantId }),
+  getMessages: (conversationId, since) => api.get(`/dm/conversations/${conversationId}/messages`, { params: { since } }),
+  sendMessage: (conversationId, content) => api.post('/dm/messages', { conversationId, content }),
+};

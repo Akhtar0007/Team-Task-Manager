@@ -65,4 +65,25 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { getAll, updateRole, remove };
+const search = async (req, res, next) => {
+  try {
+    const { q } = req.query;
+    const where = q ? {
+      OR: [
+        { name: { contains: q, mode: 'insensitive' } },
+        { email: { contains: q, mode: 'insensitive' } }
+      ]
+    } : {};
+    const users = await prisma.user.findMany({
+      where,
+      select: { id: true, name: true, email: true, role: true },
+      orderBy: { name: 'asc' },
+      take: 50
+    });
+    res.json(users);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { getAll, updateRole, remove, search };

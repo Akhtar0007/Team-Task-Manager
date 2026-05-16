@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
-import { projects, tasks, filesApi } from '../api/client';
+import { projects, tasks, filesApi, projectDocuments, resourceLinks } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import TaskComments from '../components/TaskComments';
 import TaskChecklist from '../components/TaskChecklist';
 import LabelPicker from '../components/LabelPicker';
 import TimeLog from '../components/TimeLog';
+import ChatBox from '../components/ChatBox';
 import TaskActivity from '../components/TaskActivity';
 
 const statusOptions = ['TODO', 'IN_PROGRESS', 'REVIEW', 'DONE'];
@@ -55,6 +56,13 @@ export default function ProjectDetail() {
 
   const [expandedTask, setExpandedTask] = useState(searchParams.get('task') || null);
 
+  const [projectDocs, setProjectDocs] = useState([]);
+  const [projectLinks, setProjectLinks] = useState([]);
+  const [showUploadDocs, setShowUploadDocs] = useState(false);
+  const [showAddLink, setShowAddLink] = useState(false);
+  const [linkForm, setLinkForm] = useState({ url: '', title: '', description: '' });
+  const [taskLinks, setTaskLinks] = useState({});
+
   const fetchProject = async () => {
     try {
       const { data } = await projects.getById(id);
@@ -69,6 +77,13 @@ export default function ProjectDetail() {
   };
 
   useEffect(() => { fetchProject(); }, [id]);
+
+  useEffect(() => {
+    if (project) {
+      projectDocuments.getByProject(id).then(({ data }) => setProjectDocs(data)).catch(() => {});
+      resourceLinks.getByProject(id).then(({ data }) => setProjectLinks(data)).catch(() => {});
+    }
+  }, [project]);
 
   const handleCreateTask = async (e) => {
     e.preventDefault();
@@ -154,6 +169,99 @@ export default function ProjectDetail() {
 
   const isWatching = (task) => {
     return task.watchers?.some(w => w.user.id === user?.id);
+  };
+
+  const handleUploadDocs = async (e) => {
+    const files = e.target.files;
+    if (!files.length) return;
+    try {
+      await projectDocuments.upload(id, files);
+      e.target.value = '';
+      const { data } = await projectDocuments.getByProject(id);
+      setProjectDocs(data);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to upload documents');
+    }
+  };
+
+  const handleDeleteDoc = async (docId) => {
+    if (!window.confirm('Delete this document?')) return;
+    try {
+      await projectDocuments.delete(docId);
+      setProjectDocs(prev => prev.filter(d => d.id !== docId));
+      fetchProject();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete document');
+    }
+  };
+
+  const handleAddLink = async (e) => {
+    e.preventDefault();
+    try {
+      await resourceLinks.create({ ...linkForm, projectId: id });
+      setLinkForm({ url: '', title: '', description: '' });
+      setShowAddLink(false);
+      const { data } = await resourceLinks.getByProject(id);
+      setProjectLinks(data);
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to add link');
+    }
+  };
+
+  const handleDeleteLink = async (linkId) => {
+    if (!window.confirm('Delete this link?')) return;
+    try {
+      await resourceLinks.delete(linkId);
+      setProjectLinks(prev => prev.filter(l => l.id !== linkId));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete link');
+    }
+  };
+
+  const handleUploadMultipleFiles = async (taskId, files) => {
+    if (!files.length) return;
+    try {
+      await filesApi.uploadMultiple(taskId, files);
+      fetchProject();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to upload files');
+    }
+  };
+
+  const loadTaskLinks = async (taskId) => {
+    if (taskLinks[taskId]) return;
+    try {
+      const { data } = await resourceLinks.getByTask(taskId);
+      setTaskLinks(prev => ({ ...prev, [taskId]: data }));
+    } catch (err) {
+      console.error('Failed to load task links');
+    }
+  };
+
+  const handleAddTaskLink = async (taskId, e) => {
+    e.preventDefault();
+    const url = e.target.url.value;
+    const title = e.target.title.value;
+    if (!url || !title) return;
+    try {
+      await resourceLinks.create({ url, title, taskId });
+      e.target.reset();
+      const { data } = await resourceLinks.getByTask(taskId);
+      setTaskLinks(prev => ({ ...prev, [taskId]: data }));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to add link');
+    }
+  };
+
+  const handleDeleteTaskLink = async (linkId, taskId) => {
+    if (!window.confirm('Delete this link?')) return;
+    try {
+      await resourceLinks.delete(linkId);
+      const { data } = await resourceLinks.getByTask(taskId);
+      setTaskLinks(prev => ({ ...prev, [taskId]: data }));
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to delete link');
+    }
   };
 
   const handleDeleteProject = async () => {
@@ -458,7 +566,7 @@ export default function ProjectDetail() {
                             </div>
                           )}
 
-                          <div className="mt-2">
+                          <div className="mt-2 flex items-center space-x-3">
                             <label className="cursor-pointer text-xs text-indigo-600 hover:underline">
                               + Attach file
                               <input
@@ -472,6 +580,62 @@ export default function ProjectDetail() {
                                 }}
                               />
                             </label>
+                            <label className="cursor-pointer text-xs text-indigo-600 hover:underline">
+                              + Attach multiple
+                              <input
+                                type="file"
+                                multiple
+                                className="hidden"
+                                onChange={e => {
+                                  if (e.target.files.length) {
+                                    handleUploadMultipleFiles(task.id, e.target.files);
+                                    e.target.value = '';
+                                  }
+                                }}
+                              />
+                            </label>
+                          </div>
+
+                          {/* Task Links */}
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="text-xs font-medium text-gray-500">Links</p>
+                              <button
+                                onClick={() => {
+                                  loadTaskLinks(task.id);
+                                  const el = document.getElementById(`task-link-form-${task.id}`);
+                                  el.classList.toggle('hidden');
+                                }}
+                                className="text-xs text-indigo-600 hover:underline"
+                              >+ Add link</button>
+                            </div>
+                            <form
+                              id={`task-link-form-${task.id}`}
+                              className="hidden mb-2 flex gap-1"
+                              onSubmit={e => handleAddTaskLink(task.id, e)}
+                            >
+                              <input name="url" placeholder="URL" className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs" required />
+                              <input name="title" placeholder="Title" className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs" required />
+                              <button type="submit" className="px-2 py-1 bg-indigo-600 text-white text-xs rounded">Add</button>
+                            </form>
+                            {(taskLinks[task.id] || []).length > 0 && (
+                              <div className="space-y-1">
+                                {(taskLinks[task.id] || []).map(link => (
+                                  <div key={link.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
+                                    <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-indigo-600 hover:underline truncate">
+                                      {link.title}
+                                    </a>
+                                    <button onClick={() => handleDeleteTaskLink(link.id, task.id)} className="text-red-500 text-xs hover:underline ml-2 flex-shrink-0">Del</button>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Task Chat */}
+                          <div className="mt-3 pt-3 border-t border-gray-100">
+                            <p className="text-xs font-medium text-gray-500 mb-2">Task Chat</p>
+                            <ChatBox taskId={task.id} maxHeight="200px" />
                           </div>
 
                           {/* Comments */}
@@ -566,6 +730,110 @@ export default function ProjectDetail() {
                       }`}>{phase.status}</span>
                       {phase.startDate && <span className="text-xs text-gray-400">{new Date(phase.startDate).toLocaleDateString()}</span>}
                       {phase.endDate && <span className="text-xs text-gray-400">→ {new Date(phase.endDate).toLocaleDateString()}</span>}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Documents */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Documents ({projectDocs.length})</h2>
+              {isAdmin && (
+                <label className="text-indigo-600 text-sm font-medium cursor-pointer hover:underline">
+                  + Upload
+                  <input type="file" multiple className="hidden" onChange={handleUploadDocs} />
+                </label>
+              )}
+            </div>
+            {projectDocs.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No documents uploaded</p>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {projectDocs.map(doc => (
+                  <div key={doc.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
+                    <a
+                      href={`/uploads/${doc.path}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-600 hover:underline truncate"
+                    >
+                      {doc.name}
+                    </a>
+                    <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                      <span className="text-xs text-gray-400">{(doc.size / 1024).toFixed(0)}KB</span>
+                      {isAdmin && (
+                        <button onClick={() => handleDeleteDoc(doc.id)} className="text-red-500 text-xs hover:underline">Del</button>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Links */}
+          <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-800">Links ({projectLinks.length})</h2>
+              {isAdmin && (
+                <button onClick={() => setShowAddLink(true)} className="text-indigo-600 text-sm font-medium hover:underline">+ Add</button>
+              )}
+            </div>
+
+            {showAddLink && (
+              <form onSubmit={handleAddLink} className="mb-4 space-y-2">
+                <input
+                  type="url"
+                  placeholder="URL *"
+                  value={linkForm.url}
+                  onChange={e => setLinkForm({ ...linkForm, url: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Title *"
+                  value={linkForm.title}
+                  onChange={e => setLinkForm({ ...linkForm, title: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  required
+                />
+                <input
+                  type="text"
+                  placeholder="Description (optional)"
+                  value={linkForm.description}
+                  onChange={e => setLinkForm({ ...linkForm, description: e.target.value })}
+                  className="w-full px-3 py-1.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+                <div className="flex space-x-2">
+                  <button type="submit" className="bg-indigo-600 text-white px-3 py-1.5 rounded-lg text-sm">Add</button>
+                  <button type="button" onClick={() => { setShowAddLink(false); setLinkForm({ url: '', title: '', description: '' }); }} className="text-gray-500 text-sm">Cancel</button>
+                </div>
+              </form>
+            )}
+
+            {projectLinks.length === 0 ? (
+              <p className="text-xs text-gray-400 italic">No links added</p>
+            ) : (
+              <div className="space-y-1 max-h-48 overflow-y-auto">
+                {projectLinks.map(link => (
+                  <div key={link.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
+                    <a
+                      href={link.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-xs text-indigo-600 hover:underline truncate"
+                    >
+                      {link.title}
+                    </a>
+                    <div className="flex items-center space-x-2 flex-shrink-0 ml-2">
+                      {link.description && <span className="text-xs text-gray-400 truncate max-w-[100px]">{link.description}</span>}
+                      {isAdmin && (
+                        <button onClick={() => handleDeleteLink(link.id)} className="text-red-500 text-xs hover:underline">Del</button>
+                      )}
                     </div>
                   </div>
                 ))}

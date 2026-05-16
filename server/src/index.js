@@ -1,3 +1,5 @@
+require('dotenv').config({ quiet: true });
+
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
@@ -16,6 +18,10 @@ const timeRoutes = require('./routes/timeRoutes');
 const issueRoutes = require('./routes/issueRoutes');
 const phaseRoutes = require('./routes/phaseRoutes');
 const timesheetRoutes = require('./routes/timesheetRoutes');
+const projectDocumentRoutes = require('./routes/projectDocumentRoutes');
+const linkRoutes = require('./routes/linkRoutes');
+const chatRoutes = require('./routes/chatRoutes');
+const dmRoutes = require('./routes/dmRoutes');
 const errorHandler = require('./utils/errorHandler');
 
 const app = express();
@@ -38,7 +44,10 @@ app.use('/api/time', timeRoutes);
 app.use('/api/issues', issueRoutes);
 app.use('/api/phases', phaseRoutes);
 app.use('/api/timesheets', timesheetRoutes);
-
+app.use('/api/documents', projectDocumentRoutes);
+app.use('/api/links', linkRoutes);
+app.use('/api/chat', chatRoutes);
+app.use('/api/dm', dmRoutes);
 const uploadsDir = path.join(__dirname, '../uploads');
 app.use('/uploads', express.static(uploadsDir));
 

@@ -89,4 +89,55 @@ const remove = async (req, res, next) => {
   }
 };
 
-module.exports = { upload, remove };
+const uploadMultiple = async (req, res, next) => {
+  try {
+    if (!req.files || req.files.length === 0) {
+      return res.status(400).json({ error: 'No files provided' });
+    }
+
+    const { taskId } = req.params;
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: {
+        project: {
+          include: {
+            members: { where: { userId: req.user.id } }
+          }
+        }
+      }
+    });
+
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    const isMember = task.project.members.length > 0;
+    if (req.user.role !== 'SUPER_ADMIN' && !isMember) {
+      return res.status(403).json({ error: 'Not a project member' });
+    }
+
+    const files = await Promise.all(
+      req.files.map(file =>
+        prisma.taskFile.create({
+          data: {
+            name: file.originalname,
+            size: file.size,
+            type: file.mimetype,
+            path: file.filename,
+            taskId,
+            uploadedById: req.user.id
+          },
+          include: {
+            uploadedBy: { select: { id: true, name: true } }
+          }
+        })
+      )
+    );
+
+    res.status(201).json(files);
+    await logActivity(req.user.id, 'UPLOAD', 'Task', taskId, `Uploaded ${files.length} file(s) to task "${task.title}"`);
+  } catch (error) {
+    next(error);
+  }
+};
+
+module.exports = { upload, uploadMultiple, remove };

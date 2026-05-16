@@ -74,6 +74,11 @@ model User {
   watchedTasks   TaskWatcher[]
   reportedIssues  Issue[] @relation("IssueReporter")
   assignedIssues  Issue[] @relation("IssueAssignee")
+  uploadedProjectDocuments ProjectDocument[]
+  createdLinks ResourceLink[]
+  chatMessages  ChatMessage[]
+  conversationsAs1 Conversation[] @relation("ConvParticipant1")
+  conversationsAs2 Conversation[] @relation("ConvParticipant2")
 }
 
 model Project {
@@ -90,6 +95,9 @@ model Project {
   tasks     Task[]
   phases    Phase[]
   issues    Issue[]
+  documents ProjectDocument[]
+  links     ResourceLink[]
+  chatMessages ChatMessage[]
 }
 
 model ProjectMember {
@@ -131,6 +139,8 @@ model Task {
   dependsOn   TaskDependency[] @relation("TaskDependsOn")
   timeEntries   TimeEntry[]
   watchers      TaskWatcher[]
+  links         ResourceLink[]
+  chatMessages  ChatMessage[]
 }
 
 model TaskFile {
@@ -289,4 +299,69 @@ model Issue {
   assignee   User?   @relation("IssueAssignee", fields: [assigneeId], references: [id])
   reporterId String
   reporter   User   @relation("IssueReporter", fields: [reporterId], references: [id])
+}
+
+model ProjectDocument {
+  id        String   @id @default(cuid())
+  name      String
+  size      Int
+  type      String
+  path      String
+  createdAt DateTime @default(now())
+
+  projectId    String
+  project      Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  uploadedById String
+  uploadedBy   User    @relation(fields: [uploadedById], references: [id])
+}
+
+model ResourceLink {
+  id          String   @id @default(cuid())
+  url         String
+  title       String
+  description String?
+  createdAt   DateTime @default(now())
+
+  projectId String?
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id])
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  participant1Id String
+  participant1   User   @relation("ConvParticipant1", fields: [participant1Id], references: [id])
+  participant2Id String
+  participant2   User   @relation("ConvParticipant2", fields: [participant2Id], references: [id])
+  messages       ChatMessage[]
+
+  @@unique([participant1Id, participant2Id])
+  @@index([participant1Id])
+  @@index([participant2Id])
+}
+
+model ChatMessage {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+
+  projectId String?
+  taskId    String?
+  task      Task?    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  project   Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  conversationId String?
+  conversation   Conversation? @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([projectId, createdAt])
+  @@index([taskId, createdAt])
+  @@index([conversationId, createdAt])
+  @@index([createdAt])
 }

@@ -28,7 +28,7 @@ export default function Layout({ children }) {
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center space-x-8">
               <Link to="/dashboard" className="text-xl font-bold tracking-tight">
-                TaskFlow
+                Task Manager
               </Link>
               <div className="hidden sm:flex space-x-1">
                 <Link to="/dashboard" className={linkClass('/dashboard')}>
@@ -39,6 +39,12 @@ export default function Layout({ children }) {
                 </Link>
                 <Link to="/projects" className={isActive('/projects') && !location.pathname.includes('/issues') ? 'px-3 py-2 rounded-md text-sm font-medium bg-indigo-700' : 'px-3 py-2 rounded-md text-sm font-medium hover:bg-indigo-500'}>
                   Projects
+                </Link>
+                <Link to="/chat" className={linkClass('/chat')}>
+                  Chat
+                </Link>
+                <Link to="/dm" className={linkClass('/dm')}>
+                  DMs
                 </Link>
                 <Link to="/timesheets" className={linkClass('/timesheets')}>
                   Timesheets

@@ -28,7 +28,7 @@ export default function Login() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100">
       <div className="max-w-md w-full mx-4">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-600">TaskFlow</h1>
+          <h1 className="text-4xl font-bold text-indigo-600">Task Manager</h1>
           <p className="text-gray-500 mt-2">Collaborate. Track. Deliver.</p>
         </div>
         <form onSubmit={handleSubmit} className="bg-white shadow-xl rounded-2xl px-8 py-8">

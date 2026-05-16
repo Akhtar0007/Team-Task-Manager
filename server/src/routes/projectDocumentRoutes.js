@@ -2,7 +2,7 @@ const { Router } = require('express');
 const multer = require('multer');
 const path = require('path');
 const authenticate = require('../middleware/auth');
-const { upload, uploadMultiple, remove } = require('../controllers/fileController');
+const { uploadMultiple, getByProject, remove } = require('../controllers/projectDocumentController');
 
 const storage = multer.diskStorage({
   destination: path.join(__dirname, '../../uploads'),
@@ -14,15 +14,15 @@ const storage = multer.diskStorage({
 
 const uploadMiddleware = multer({
   storage,
-  limits: { fileSize: 10 * 1024 * 1024 }
+  limits: { fileSize: 50 * 1024 * 1024 }
 });
 
 const router = Router();
 
 router.use(authenticate);
 
-router.post('/task/:taskId', uploadMiddleware.single('file'), upload);
-router.post('/task/:taskId/multiple', uploadMiddleware.array('files', 10), uploadMultiple);
-router.delete('/:fileId', remove);
+router.post('/project/:projectId', uploadMiddleware.array('files', 20), uploadMultiple);
+router.get('/project/:projectId', getByProject);
+router.delete('/:documentId', remove);
 
 module.exports = router;

@@ -13,6 +13,8 @@ import Issues from './pages/Issues';
 import Timesheets from './pages/Timesheets';
 import Settings from './pages/Settings';
 import Users from './pages/Users';
+import Chat from './pages/Chat';
+import DMs from './pages/DMs';
 
 function GuestRoute({ children }) {
   const { user, loading } = useAuth();
@@ -35,6 +37,8 @@ export default function App() {
       <Route path="/projects/:id/kanban" element={<ProtectedRoute><Layout><KanbanBoard /></Layout></ProtectedRoute>} />
       <Route path="/projects/:id/issues" element={<ProtectedRoute><Layout><Issues /></Layout></ProtectedRoute>} />
       <Route path="/users" element={<ProtectedRoute><Layout><Users /></Layout></ProtectedRoute>} />
+      <Route path="/chat" element={<ProtectedRoute><Layout><Chat /></Layout></ProtectedRoute>} />
+      <Route path="/dm" element={<ProtectedRoute><Layout><DMs /></Layout></ProtectedRoute>} />
     </Routes>
   );
 }
