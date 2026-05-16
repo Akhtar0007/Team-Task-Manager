@@ -6,7 +6,6 @@ const getByTask = async (req, res, next) => {
   try {
     const entries = await prisma.timeEntry.findMany({
       where: { taskId: req.params.taskId },
-      include: { user: { select: { id: true, name: true } } },
       orderBy: { createdAt: 'desc' }
     });
     const totalHours = entries.reduce((sum, e) => sum + e.hours, 0);
@@ -24,14 +23,15 @@ const create = async (req, res, next) => {
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: req.params.taskId },
-      include: { project: { include: { members: true } } }
+      where: { id: req.params.taskId }
     });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const isMember = task.project.members.some(m => m.userId === req.user.id);
-      if (!isMember) return res.status(403).json({ error: 'Not a project member' });
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
     const entry = await prisma.timeEntry.create({
@@ -40,8 +40,7 @@ const create = async (req, res, next) => {
         description: description || null,
         taskId: req.params.taskId,
         userId: req.user.id
-      },
-      include: { user: { select: { id: true, name: true } } }
+      }
     });
 
     await logActivity(req.user.id, 'LOG_TIME', 'Task', task.id, `${req.user.name} logged ${hours}h on "${task.title}"`);

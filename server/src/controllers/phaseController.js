@@ -20,8 +20,8 @@ const create = async (req, res, next) => {
     if (!name || !name.trim()) return res.status(400).json({ error: 'Phase name is required' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: req.params.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: req.params.projectId, userId: req.user.id }
       });
       if (!membership || membership.role !== 'ADMIN') {
         return res.status(403).json({ error: 'Admin access required' });
@@ -50,8 +50,8 @@ const update = async (req, res, next) => {
 
     if (req.user.role !== 'SUPER_ADMIN') {
       const phase = await prisma.phase.findUnique({ where: { id: req.params.id } });
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: phase.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: phase.projectId, userId: req.user.id }
       });
       if (!membership || membership.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
     }
@@ -79,8 +79,8 @@ const remove = async (req, res, next) => {
     if (!phase) return res.status(404).json({ error: 'Phase not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: phase.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: phase.projectId, userId: req.user.id }
       });
       if (!membership || membership.role !== 'ADMIN') return res.status(403).json({ error: 'Admin access required' });
     }

@@ -15,14 +15,15 @@ const create = async (req, res, next) => {
       data: {
         name,
         description,
-        createdBy: req.user.id,
-        members: { create: { userId: req.user.id, role: 'ADMIN' } }
-      },
-      include: {
-        members: {
-          include: { user: { select: { id: true, name: true, email: true } } }
-        },
-        _count: { select: { tasks: true } }
+        createdBy: req.user.id
+      }
+    });
+
+    await prisma.projectMember.create({
+      data: {
+        projectId: project.id,
+        userId: req.user.id,
+        role: 'ADMIN'
       }
     });
 
@@ -38,10 +39,6 @@ const getAll = async (req, res, next) => {
     const where = req.user.role === 'SUPER_ADMIN' ? {} : { members: { some: { userId: req.user.id } } };
     const projects = await prisma.project.findMany({
       where,
-      include: {
-        creator: { select: { id: true, name: true } },
-        _count: { select: { tasks: true, members: true } }
-      },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -54,55 +51,18 @@ const getAll = async (req, res, next) => {
 const getById = async (req, res, next) => {
   try {
     const project = await prisma.project.findUnique({
-      where: { id: req.params.id },
-      include: {
-        creator: { select: { id: true, name: true } },
-        members: {
-          include: { user: { select: { id: true, name: true, email: true } } }
-        },
-        tasks: {
-          include: {
-            assignee: { select: { id: true, name: true } },
-            createdBy: { select: { id: true, name: true } },
-            files: {
-              include: { uploadedBy: { select: { id: true, name: true } } },
-              orderBy: { createdAt: 'desc' }
-            },
-            comments: {
-              include: { user: { select: { id: true, name: true } } },
-              orderBy: { createdAt: 'asc' }
-            },
-            subtasks: { orderBy: { createdAt: 'asc' } },
-            labels: {
-              include: { label: true }
-            },
-            timeEntries: {
-              include: { user: { select: { id: true, name: true } } },
-              orderBy: { createdAt: 'desc' }
-            },
-            watchers: {
-              include: { user: { select: { id: true, name: true } } }
-            }
-          },
-          orderBy: { createdAt: 'desc' }
-        },
-        labels: { orderBy: { name: 'asc' } },
-        phases: { orderBy: { startDate: 'asc' } },
-        issues: {
-          include: {
-            assignee: { select: { id: true, name: true } },
-            reporter: { select: { id: true, name: true } }
-          },
-          orderBy: { createdAt: 'desc' }
-        }
-      }
+      where: { id: req.params.id }
     });
 
     if (!project) {
       return res.status(404).json({ error: 'Project not found' });
     }
 
-    const isMember = req.user.role === 'SUPER_ADMIN' || project.members.some(m => m.userId === req.user.id);
+    const membership = await prisma.projectMember.findFirst({
+      where: { projectId: project.id, userId: req.user.id }
+    });
+
+    const isMember = req.user.role === 'SUPER_ADMIN' || !!membership;
     if (!isMember) {
       return res.status(403).json({ error: 'Not a project member' });
     }
@@ -121,9 +81,9 @@ const update = async (req, res, next) => {
     }
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
+      const membership = await prisma.projectMember.findFirst({
         where: {
-          projectId_userId: { projectId: req.params.id, userId: req.user.id }
+          projectId: req.params.id, userId: req.user.id
         }
       });
       if (!membership || membership.role !== 'ADMIN') {
@@ -133,8 +93,7 @@ const update = async (req, res, next) => {
 
     const project = await prisma.project.update({
       where: { id: req.params.id },
-      data: { name: req.body.name, description: req.body.description },
-      include: { _count: { select: { tasks: true, members: true } } }
+      data: { name: req.body.name, description: req.body.description }
     });
 
     res.json(project);
@@ -166,9 +125,9 @@ const addMember = async (req, res, next) => {
     const userToAdd = await prisma.user.findUnique({ where: { email } });
     if (!userToAdd) return res.status(404).json({ error: 'User not found' });
 
-    const existingMember = await prisma.projectMember.findUnique({
+    const existingMember = await prisma.projectMember.findFirst({
       where: {
-        projectId_userId: { projectId: req.params.id, userId: userToAdd.id }
+        projectId: req.params.id, userId: userToAdd.id
       }
     });
 
@@ -181,8 +140,7 @@ const addMember = async (req, res, next) => {
         projectId: req.params.id,
         userId: userToAdd.id,
         role: role || 'MEMBER'
-      },
-      include: { user: { select: { id: true, name: true, email: true } } }
+      }
     });
 
     res.status(201).json(member);

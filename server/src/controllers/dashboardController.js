@@ -6,12 +6,7 @@ const getStats = async (req, res, next) => {
     let tasks;
 
     if (req.user.role === 'SUPER_ADMIN') {
-      tasks = await prisma.task.findMany({
-        include: {
-          project: { select: { id: true, name: true } },
-          assignee: { select: { id: true, name: true } }
-        }
-      });
+      tasks = await prisma.task.findMany();
     } else {
       const memberships = await prisma.projectMember.findMany({
         where: { userId: req.user.id },
@@ -21,11 +16,7 @@ const getStats = async (req, res, next) => {
       const ids = memberships.map(m => m.projectId);
 
       tasks = await prisma.task.findMany({
-        where: { projectId: { in: ids } },
-        include: {
-          project: { select: { id: true, name: true } },
-          assignee: { select: { id: true, name: true } }
-        }
+        where: { projectId: { in: ids } }
       });
     }
 
@@ -70,10 +61,7 @@ const getStats = async (req, res, next) => {
         }),
         prisma.activityLog.findMany({
           take: 10,
-          orderBy: { createdAt: 'desc' },
-          include: {
-            user: { select: { id: true, name: true } }
-          }
+          orderBy: { createdAt: 'desc' }
         })
       ]);
 
@@ -82,14 +70,8 @@ const getStats = async (req, res, next) => {
           assignedTasks: { some: { status: 'DONE' } }
         },
         select: {
-          id: true, name: true, email: true,
-          _count: {
-            select: {
-              assignedTasks: { where: { status: 'DONE' } }
-            }
-          }
+          id: true, name: true, email: true
         },
-        orderBy: { assignedTasks: { _count: 'desc' } },
         take: 5
       });
 

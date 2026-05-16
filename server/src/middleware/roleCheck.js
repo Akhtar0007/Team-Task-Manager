@@ -15,10 +15,8 @@ const isProjectAdmin = async (req, res, next) => {
     const projectId = req.params.id || req.body.projectId;
     if (!projectId) return res.status(400).json({ error: 'Project ID required' });
 
-    const membership = await prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: { projectId, userId: req.user.id }
-      }
+    const membership = await prisma.projectMember.findFirst({
+      where: { projectId, userId: req.user.id }
     });
 
     if (!membership || membership.role !== 'ADMIN') {
@@ -38,10 +36,8 @@ const isProjectMember = async (req, res, next) => {
     const projectId = req.params.id || req.body.projectId;
     if (!projectId) return res.status(400).json({ error: 'Project ID required' });
 
-    const membership = await prisma.projectMember.findUnique({
-      where: {
-        projectId_userId: { projectId, userId: req.user.id }
-      }
+    const membership = await prisma.projectMember.findFirst({
+      where: { projectId, userId: req.user.id }
     });
 
     if (!membership) {

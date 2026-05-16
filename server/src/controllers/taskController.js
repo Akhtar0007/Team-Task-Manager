@@ -3,30 +3,6 @@ const { PrismaClient } = require('@prisma/client');
 const { logActivity } = require('../utils/activityLog');
 const prisma = new PrismaClient();
 
-const taskIncludes = {
-  assignee: { select: { id: true, name: true } },
-  createdBy: { select: { id: true, name: true } },
-  files: {
-    include: { uploadedBy: { select: { id: true, name: true } } },
-    orderBy: { createdAt: 'desc' }
-  },
-  comments: {
-    include: { user: { select: { id: true, name: true } } },
-    orderBy: { createdAt: 'asc' }
-  },
-  subtasks: { orderBy: { createdAt: 'asc' } },
-  labels: {
-    include: { label: true }
-  },
-  timeEntries: {
-    include: { user: { select: { id: true, name: true } } },
-    orderBy: { createdAt: 'desc' }
-  },
-  watchers: {
-    include: { user: { select: { id: true, name: true } } }
-  }
-};
-
 const create = async (req, res, next) => {
   try {
     const errors = validationResult(req);
@@ -38,8 +14,8 @@ const create = async (req, res, next) => {
     const { projectId } = req.params;
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId: req.user.id }
       });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
       if (membership.role !== 'ADMIN') {
@@ -57,8 +33,7 @@ const create = async (req, res, next) => {
         projectId,
         assigneeId: assigneeId || null,
         createdById: req.user.id
-      },
-      include: taskIncludes
+      }
     });
 
     if (assigneeId && assigneeId !== req.user.id) {
@@ -93,8 +68,8 @@ const update = async (req, res, next) => {
     let isAssignee = task.assigneeId === req.user.id;
 
     if (!isAdmin) {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
       });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
       if (membership.role === 'ADMIN') isAdmin = true;
@@ -121,8 +96,7 @@ const update = async (req, res, next) => {
         ...(priority !== undefined && { priority }),
         ...(dueDate !== undefined && { dueDate: dueDate ? new Date(dueDate) : null }),
         ...(assigneeId !== undefined && { assigneeId })
-      },
-      include: taskIncludes
+      }
     });
 
     if (assigneeId && assigneeId !== task.assigneeId && assigneeId !== req.user.id) {
@@ -170,8 +144,8 @@ const remove = async (req, res, next) => {
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
       });
       if (!membership || membership.role !== 'ADMIN') {
         return res.status(403).json({ error: 'Admin access required' });
@@ -192,7 +166,7 @@ const search = async (req, res, next) => {
 
     const where = { projectId };
 
-    if (q) where.title = { contains: q, mode: 'insensitive' };
+    if (q) where.title = { contains: q };
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (assigneeId) where.assigneeId = assigneeId;
@@ -201,15 +175,14 @@ const search = async (req, res, next) => {
     }
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId: req.user.id }
       });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
     const tasks = await prisma.task.findMany({
       where,
-      include: taskIncludes,
       orderBy: { createdAt: 'desc' }
     });
 
@@ -224,15 +197,14 @@ const kanban = async (req, res, next) => {
     const { projectId } = req.params;
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId: req.user.id }
       });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
     const tasks = await prisma.task.findMany({
       where: { projectId },
-      include: taskIncludes,
       orderBy: { createdAt: 'desc' }
     });
 
@@ -251,14 +223,13 @@ const kanban = async (req, res, next) => {
 const getById = async (req, res, next) => {
   try {
     const task = await prisma.task.findUnique({
-      where: { id: req.params.id },
-      include: taskIncludes
+      where: { id: req.params.id }
     });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
       });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
@@ -272,18 +243,19 @@ const getById = async (req, res, next) => {
 const watch = async (req, res, next) => {
   try {
     const task = await prisma.task.findUnique({
-      where: { id: req.params.id },
-      include: { project: { include: { members: true } } }
+      where: { id: req.params.id }
     });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const isMember = task.project.members.some(m => m.userId === req.user.id);
-      if (!isMember) return res.status(403).json({ error: 'Not a project member' });
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
-    const existing = await prisma.taskWatcher.findUnique({
-      where: { taskId_userId: { taskId: req.params.id, userId: req.user.id } }
+    const existing = await prisma.taskWatcher.findFirst({
+      where: { taskId: req.params.id, userId: req.user.id }
     });
 
     if (existing) {
@@ -302,8 +274,8 @@ const watch = async (req, res, next) => {
 
 const watchStatus = async (req, res, next) => {
   try {
-    const existing = await prisma.taskWatcher.findUnique({
-      where: { taskId_userId: { taskId: req.params.id, userId: req.user.id } }
+    const existing = await prisma.taskWatcher.findFirst({
+      where: { taskId: req.params.id, userId: req.user.id }
     });
     res.json({ watching: !!existing });
   } catch (error) {
@@ -329,10 +301,6 @@ const myTasks = async (req, res, next) => {
 
     const tasks = await prisma.task.findMany({
       where,
-      include: {
-        ...taskIncludes,
-        project: { select: { id: true, name: true } }
-      },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }]
     });
 
@@ -354,10 +322,6 @@ const myKanban = async (req, res, next) => {
       where: {
         assigneeId: req.user.id,
         projectId: { in: projectIds }
-      },
-      include: {
-        ...taskIncludes,
-        project: { select: { id: true, name: true } }
       },
       orderBy: [{ dueDate: 'asc' }, { createdAt: 'desc' }]
     });

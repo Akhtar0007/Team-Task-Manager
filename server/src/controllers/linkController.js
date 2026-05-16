@@ -23,8 +23,8 @@ const create = async (req, res, next) => {
       validProjectId = task.projectId;
 
       if (req.user.role !== 'SUPER_ADMIN') {
-        const membership = await prisma.projectMember.findUnique({
-          where: { projectId_userId: { projectId: task.projectId, userId: req.user.id } }
+        const membership = await prisma.projectMember.findFirst({
+          where: { projectId: task.projectId, userId: req.user.id }
         });
         if (!membership) return res.status(403).json({ error: 'Not a project member' });
       }
@@ -35,8 +35,8 @@ const create = async (req, res, next) => {
       if (!project) return res.status(404).json({ error: 'Project not found' });
 
       if (req.user.role !== 'SUPER_ADMIN') {
-        const membership = await prisma.projectMember.findUnique({
-          where: { projectId_userId: { projectId, userId: req.user.id } }
+        const membership = await prisma.projectMember.findFirst({
+          where: { projectId, userId: req.user.id }
         });
         if (!membership) return res.status(403).json({ error: 'Not a project member' });
       }
@@ -57,9 +57,6 @@ const create = async (req, res, next) => {
         projectId: projectId || null,
         taskId: taskId || null,
         createdById: req.user.id
-      },
-      include: {
-        createdBy: { select: { id: true, name: true } }
       }
     });
 
@@ -76,9 +73,6 @@ const getByProject = async (req, res, next) => {
     const { projectId } = req.params;
     const links = await prisma.resourceLink.findMany({
       where: { projectId },
-      include: {
-        createdBy: { select: { id: true, name: true } }
-      },
       orderBy: { createdAt: 'desc' }
     });
     res.json(links);
@@ -92,9 +86,6 @@ const getByTask = async (req, res, next) => {
     const { taskId } = req.params;
     const links = await prisma.resourceLink.findMany({
       where: { taskId },
-      include: {
-        createdBy: { select: { id: true, name: true } }
-      },
       orderBy: { createdAt: 'desc' }
     });
     res.json(links);
@@ -107,20 +98,19 @@ const remove = async (req, res, next) => {
   try {
     const { linkId } = req.params;
     const link = await prisma.resourceLink.findUnique({
-      where: { id: linkId },
-      include: {
-        project: {
-          include: {
-            members: { where: { userId: req.user.id } }
-          }
-        }
-      }
+      where: { id: linkId }
     });
 
     if (!link) return res.status(404).json({ error: 'Link not found' });
 
-    const isAdmin = req.user.role === 'SUPER_ADMIN' ||
-      (link.project && link.project.members.length > 0 && link.project.members[0].role === 'ADMIN');
+    let isAdmin = req.user.role === 'SUPER_ADMIN';
+
+    if (!isAdmin && link.projectId) {
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: link.projectId, userId: req.user.id }
+      });
+      if (membership && membership.role === 'ADMIN') isAdmin = true;
+    }
 
     if (!isAdmin && link.createdById !== req.user.id) {
       return res.status(403).json({ error: 'Not authorized to delete this link' });

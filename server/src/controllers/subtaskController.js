@@ -22,13 +22,14 @@ const create = async (req, res, next) => {
     }
 
     const task = await prisma.task.findUnique({
-      where: { id: req.params.taskId },
-      include: { project: { include: { members: true } } }
+      where: { id: req.params.taskId }
     });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = task.project.members.find(m => m.userId === req.user.id);
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
+      });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 

@@ -6,8 +6,7 @@ const getAll = async (req, res, next) => {
   try {
     const users = await prisma.user.findMany({
       select: {
-        id: true, name: true, email: true, role: true, createdAt: true,
-        _count: { select: { assignedTasks: true, createdTasks: true, ownedProjects: true } }
+        id: true, name: true, email: true, role: true, createdAt: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -70,8 +69,8 @@ const search = async (req, res, next) => {
     const { q } = req.query;
     const where = q ? {
       OR: [
-        { name: { contains: q, mode: 'insensitive' } },
-        { email: { contains: q, mode: 'insensitive' } }
+        { name: { contains: q } },
+        { email: { contains: q } }
       ]
     } : {};
     const users = await prisma.user.findMany({

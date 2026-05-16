@@ -14,22 +14,19 @@ const uploadMultiple = async (req, res, next) => {
     const { projectId } = req.params;
 
     const project = await prisma.project.findUnique({
-      where: { id: projectId },
-      include: {
-        members: { where: { userId: req.user.id } }
-      }
+      where: { id: projectId }
     });
 
     if (!project) return res.status(404).json({ error: 'Project not found' });
 
-    const isMember = project.members.length > 0;
-    if (req.user.role !== 'SUPER_ADMIN' && !isMember) {
-      return res.status(403).json({ error: 'Not a project member' });
-    }
-
-    const isAdmin = req.user.role === 'SUPER_ADMIN' || (project.members.length > 0 && project.members[0].role === 'ADMIN');
-    if (!isAdmin) {
-      return res.status(403).json({ error: 'Only admin or super admin can upload project documents' });
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId, userId: req.user.id }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
+      if (membership.role !== 'ADMIN') {
+        return res.status(403).json({ error: 'Only admin or super admin can upload project documents' });
+      }
     }
 
     const documents = await Promise.all(
@@ -42,9 +39,6 @@ const uploadMultiple = async (req, res, next) => {
             path: file.filename,
             projectId,
             uploadedById: req.user.id
-          },
-          include: {
-            uploadedBy: { select: { id: true, name: true } }
           }
         })
       )
@@ -62,9 +56,6 @@ const getByProject = async (req, res, next) => {
     const { projectId } = req.params;
     const documents = await prisma.projectDocument.findMany({
       where: { projectId },
-      include: {
-        uploadedBy: { select: { id: true, name: true } }
-      },
       orderBy: { createdAt: 'desc' }
     });
 
@@ -79,19 +70,16 @@ const remove = async (req, res, next) => {
     const { documentId } = req.params;
 
     const document = await prisma.projectDocument.findUnique({
-      where: { id: documentId },
-      include: {
-        project: {
-          include: {
-            members: { where: { userId: req.user.id } }
-          }
-        }
-      }
+      where: { id: documentId }
     });
 
     if (!document) return res.status(404).json({ error: 'Document not found' });
 
-    const isAdmin = req.user.role === 'SUPER_ADMIN' || (document.project.members.length > 0 && document.project.members[0].role === 'ADMIN');
+    const membership = await prisma.projectMember.findFirst({
+      where: { projectId: document.projectId, userId: req.user.id }
+    });
+
+    const isAdmin = req.user.role === 'SUPER_ADMIN' || (membership && membership.role === 'ADMIN');
     if (!isAdmin) {
       return res.status(403).json({ error: 'Only admin or super admin can delete documents' });
     }

@@ -13,27 +13,14 @@ const startOrGetConversation = async (req, res, next) => {
     const p1 = req.user.id < other.id ? req.user.id : other.id;
     const p2 = req.user.id < other.id ? other.id : req.user.id;
 
-    const existing = await prisma.conversation.findUnique({
-      where: { participant1Id_participant2Id: { participant1Id: p1, participant2Id: p2 } },
-      include: {
-        participant1: { select: { id: true, name: true, email: true, role: true } },
-        participant2: { select: { id: true, name: true, email: true, role: true } },
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          include: { user: { select: { id: true, name: true } } }
-        }
-      }
+    const existing = await prisma.conversation.findFirst({
+      where: { participant1Id: p1, participant2Id: p2 }
     });
 
     if (existing) return res.json(existing);
 
     const conversation = await prisma.conversation.create({
-      data: { participant1Id: p1, participant2Id: p2 },
-      include: {
-        participant1: { select: { id: true, name: true, email: true, role: true } },
-        participant2: { select: { id: true, name: true, email: true, role: true } }
-      }
+      data: { participant1Id: p1, participant2Id: p2 }
     });
 
     res.status(201).json(conversation);
@@ -50,15 +37,6 @@ const getMyConversations = async (req, res, next) => {
           { participant1Id: req.user.id },
           { participant2Id: req.user.id }
         ]
-      },
-      include: {
-        participant1: { select: { id: true, name: true, email: true, role: true } },
-        participant2: { select: { id: true, name: true, email: true, role: true } },
-        messages: {
-          orderBy: { createdAt: 'desc' },
-          take: 1,
-          include: { user: { select: { id: true, name: true } } }
-        }
       },
       orderBy: { updatedAt: 'desc' }
     });
@@ -85,9 +63,6 @@ const getMessages = async (req, res, next) => {
       where: {
         conversationId,
         createdAt: { gt: since }
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, role: true } }
       },
       orderBy: { createdAt: 'asc' },
       take: 100
@@ -116,9 +91,6 @@ const sendMessage = async (req, res, next) => {
         content: content.trim(),
         conversationId,
         userId: req.user.id
-      },
-      include: {
-        user: { select: { id: true, name: true, email: true, role: true } }
       }
     });
 

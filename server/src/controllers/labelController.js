@@ -22,8 +22,8 @@ const create = async (req, res, next) => {
     }
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: req.params.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: req.params.projectId, userId: req.user.id }
       });
       if (!membership) return res.status(403).json({ error: 'Not a project member' });
       if (membership.role !== 'ADMIN') {
@@ -31,8 +31,8 @@ const create = async (req, res, next) => {
       }
     }
 
-    const existing = await prisma.label.findUnique({
-      where: { name_projectId: { name: name.trim(), projectId: req.params.projectId } }
+    const existing = await prisma.label.findFirst({
+      where: { name: name.trim(), projectId: req.params.projectId }
     });
     if (existing) return res.status(409).json({ error: 'Label already exists' });
 
@@ -53,8 +53,8 @@ const remove = async (req, res, next) => {
     if (!label) return res.status(404).json({ error: 'Label not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const membership = await prisma.projectMember.findUnique({
-        where: { projectId_userId: { projectId: label.projectId, userId: req.user.id } }
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: label.projectId, userId: req.user.id }
       });
       if (!membership || membership.role !== 'ADMIN') {
         return res.status(403).json({ error: 'Admin access required' });
@@ -73,14 +73,15 @@ const addToTask = async (req, res, next) => {
   try {
     const { labelId } = req.body;
     const task = await prisma.task.findUnique({
-      where: { id: req.params.taskId },
-      include: { project: { include: { members: true } } }
+      where: { id: req.params.taskId }
     });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.user.role !== 'SUPER_ADMIN') {
-      const isMember = task.project.members.some(m => m.userId === req.user.id);
-      if (!isMember) return res.status(403).json({ error: 'Not a project member' });
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
     const label = await prisma.label.findUnique({ where: { id: labelId } });
@@ -88,8 +89,8 @@ const addToTask = async (req, res, next) => {
       return res.status(400).json({ error: 'Invalid label for this project' });
     }
 
-    const existing = await prisma.taskLabel.findUnique({
-      where: { taskId_labelId: { taskId: req.params.taskId, labelId } }
+    const existing = await prisma.taskLabel.findFirst({
+      where: { taskId: req.params.taskId, labelId }
     });
     if (existing) return res.status(409).json({ error: 'Label already on task' });
 
@@ -106,13 +107,13 @@ const addToTask = async (req, res, next) => {
 
 const removeFromTask = async (req, res, next) => {
   try {
-    const taskLabel = await prisma.taskLabel.findUnique({
-      where: { taskId_labelId: { taskId: req.params.taskId, labelId: req.params.labelId } }
+    const taskLabel = await prisma.taskLabel.findFirst({
+      where: { taskId: req.params.taskId, labelId: req.params.labelId }
     });
     if (!taskLabel) return res.status(404).json({ error: 'Label not on task' });
 
     await prisma.taskLabel.delete({
-      where: { taskId_labelId: { taskId: req.params.taskId, labelId: req.params.labelId } }
+      where: { id: taskLabel.id }
     });
 
     res.json({ message: 'Label removed' });

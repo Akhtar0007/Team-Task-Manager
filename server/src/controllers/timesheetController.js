@@ -26,11 +26,6 @@ const getMyTimesheet = async (req, res, next) => {
         createdAt: { gte: startOfWeek, lte: endOfWeek },
         task: { projectId: { in: projectIds } }
       },
-      include: {
-        task: {
-          select: { id: true, title: true, project: { select: { id: true, name: true } } }
-        }
-      },
       orderBy: { createdAt: 'asc' }
     });
 

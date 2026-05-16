@@ -1,16 +1,12 @@
 const errorHandler = (err, req, res, next) => {
   console.error(err.stack);
 
-  if (err.code === 'P2002') {
+  if (err.code === 11000) {
     return res.status(409).json({ error: 'Resource already exists' });
   }
 
-  if (err.code === 'P2025') {
-    return res.status(404).json({ error: 'Resource not found' });
-  }
-
-  if (err.code === 'P1010') {
-    return res.status(500).json({ error: 'Database access denied. Check DATABASE_URL permissions.' });
+  if (err.name === 'PrismaClientKnownRequestError') {
+    return res.status(500).json({ error: 'Database operation failed' });
   }
 
   if (err.name === 'PrismaClientInitializationError') {

@@ -5,43 +5,52 @@ const prisma = new PrismaClient();
 
 async function main() {
   const superPassword = await bcrypt.hash('Ethara@123', 12);
-  const superUser = await prisma.user.upsert({
-    where: { email: 'shahnawaz2020mth@gmail.com' },
-    update: { name: 'Super Admin', role: 'SUPER_ADMIN' },
-    create: {
-      name: 'Super Admin',
-      email: 'shahnawaz2020mth@gmail.com',
-      password: superPassword,
-      role: 'SUPER_ADMIN',
-    },
-  });
-  console.log('Super admin seeded:', superUser.email);
+  const existing = await prisma.user.findUnique({ where: { email: 'shahnawaz2020mth@gmail.com' } });
+  if (!existing) {
+    const superUser = await prisma.user.create({
+      data: {
+        name: 'Super Admin',
+        email: 'shahnawaz2020mth@gmail.com',
+        password: superPassword,
+        role: 'SUPER_ADMIN',
+      },
+    });
+    console.log('Super admin seeded:', superUser.email);
+  } else {
+    console.log('Super admin already exists:', existing.email);
+  }
 
   const adminPassword = await bcrypt.hash('Admin@123', 12);
-  const adminUser = await prisma.user.upsert({
-    where: { email: 'admin@test.com' },
-    update: { name: 'Test Admin', role: 'ADMIN' },
-    create: {
-      name: 'Test Admin',
-      email: 'admin@test.com',
-      password: adminPassword,
-      role: 'ADMIN',
-    },
-  });
-  console.log('Admin seeded:', adminUser.email);
+  const existingAdmin = await prisma.user.findUnique({ where: { email: 'admin@test.com' } });
+  if (!existingAdmin) {
+    const adminUser = await prisma.user.create({
+      data: {
+        name: 'Test Admin',
+        email: 'admin@test.com',
+        password: adminPassword,
+        role: 'ADMIN',
+      },
+    });
+    console.log('Admin seeded:', adminUser.email);
+  } else {
+    console.log('Admin already exists:', existingAdmin.email);
+  }
 
   const taskerPassword = await bcrypt.hash('Tasker@123', 12);
-  const taskerUser = await prisma.user.upsert({
-    where: { email: 'tasker@test.com' },
-    update: { name: 'Test Tasker', role: 'MEMBER' },
-    create: {
-      name: 'Test Tasker',
-      email: 'tasker@test.com',
-      password: taskerPassword,
-      role: 'MEMBER',
-    },
-  });
-  console.log('Tasker seeded:', taskerUser.email);
+  const existingTasker = await prisma.user.findUnique({ where: { email: 'tasker@test.com' } });
+  if (!existingTasker) {
+    const taskerUser = await prisma.user.create({
+      data: {
+        name: 'Test Tasker',
+        email: 'tasker@test.com',
+        password: taskerPassword,
+        role: 'MEMBER',
+      },
+    });
+    console.log('Tasker seeded:', taskerUser.email);
+  } else {
+    console.log('Tasker already exists:', existingTasker.email);
+  }
 }
 
 main()

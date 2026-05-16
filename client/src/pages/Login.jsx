@@ -25,37 +25,46 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-50 to-blue-100">
-      <div className="max-w-md w-full mx-4">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 to-indigo-50 dark:from-gray-900 dark:to-gray-800 relative overflow-hidden">
+      <div className="absolute inset-0 bg-white/20 dark:bg-black/20 backdrop-blur-3xl" />
+      <div className="max-w-md w-full mx-4 relative">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-indigo-600">Task Manager</h1>
-          <p className="text-gray-500 mt-2">Collaborate. Track. Deliver.</p>
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-indigo-600 to-indigo-700 text-white shadow-lg mb-4">
+            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+            </svg>
+          </div>
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Task Manager</h1>
+          <p className="text-gray-500 dark:text-gray-400 mt-2">Sign in to manage your tasks</p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white shadow-xl rounded-2xl px-8 py-8">
-          <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Welcome back</h2>
+        <form onSubmit={handleSubmit} className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl shadow-2xl rounded-2xl px-8 py-8 border border-white/50 dark:border-gray-700/50">
+          <h2 className="text-xl font-semibold mb-6 text-gray-800 dark:text-gray-100">Welcome back</h2>
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4 text-sm">
-              {error}
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-400 px-4 py-3 rounded-lg mb-4 text-sm flex items-center space-x-2">
+              <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{error}</span>
             </div>
           )}
           <div className="mb-4">
-            <label className="block text-gray-700 text-sm font-medium mb-2">Email</label>
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Email</label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="input-field"
               placeholder="you@example.com"
               required
             />
           </div>
           <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-medium mb-2">Password</label>
+            <label className="block text-gray-700 dark:text-gray-300 text-sm font-medium mb-2">Password</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition"
+              className="input-field"
               placeholder="••••••••"
               required
             />
@@ -63,13 +72,21 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2.5 rounded-lg font-medium hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+            className="w-full bg-gradient-to-r from-indigo-600 to-indigo-700 text-white py-2.5 rounded-lg font-medium hover:from-indigo-700 hover:to-indigo-800 disabled:opacity-50 transition-all duration-200 shadow-lg shadow-indigo-500/25 active:scale-[0.98]"
           >
-            {loading ? 'Signing in...' : 'Sign in'}
+            {loading ? (
+              <span className="flex items-center justify-center space-x-2">
+                <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                </svg>
+                <span>Signing in...</span>
+              </span>
+            ) : 'Sign in'}
           </button>
-          <p className="text-center mt-6 text-sm text-gray-500">
+          <p className="text-center mt-6 text-sm text-gray-500 dark:text-gray-400">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-indigo-600 font-medium hover:underline">
+            <Link to="/signup" className="text-indigo-600 dark:text-indigo-400 font-medium hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors">
               Create one
             </Link>
           </p>

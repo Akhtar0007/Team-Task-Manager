@@ -14,21 +14,16 @@ const upload = async (req, res, next) => {
     const { taskId } = req.params;
 
     const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      include: {
-        project: {
-          include: {
-            members: { where: { userId: req.user.id } }
-          }
-        }
-      }
+      where: { id: taskId }
     });
 
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
-    const isMember = task.project.members.length > 0;
-    if (req.user.role !== 'SUPER_ADMIN' && !isMember) {
-      return res.status(403).json({ error: 'Not a project member' });
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
     const file = await prisma.taskFile.create({
@@ -39,9 +34,6 @@ const upload = async (req, res, next) => {
         path: req.file.filename,
         taskId,
         uploadedById: req.user.id
-      },
-      include: {
-        uploadedBy: { select: { id: true, name: true } }
       }
     });
 
@@ -55,23 +47,19 @@ const upload = async (req, res, next) => {
 const remove = async (req, res, next) => {
   try {
     const file = await prisma.taskFile.findUnique({
-      where: { id: req.params.fileId },
-      include: {
-        task: {
-          include: {
-            project: {
-              include: {
-                members: { where: { userId: req.user.id } }
-              }
-            }
-          }
-        }
-      }
+      where: { id: req.params.fileId }
     });
 
     if (!file) return res.status(404).json({ error: 'File not found' });
 
-    const isProjectAdmin = file.task.project.members.length > 0 && file.task.project.members[0].role === 'ADMIN';
+    const task = await prisma.task.findUnique({ where: { id: file.taskId } });
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    const membership = await prisma.projectMember.findFirst({
+      where: { projectId: task.projectId, userId: req.user.id }
+    });
+
+    const isProjectAdmin = membership && membership.role === 'ADMIN';
     if (req.user.role !== 'SUPER_ADMIN' && !isProjectAdmin) {
       return res.status(403).json({ error: 'Only admin or super admin can delete files' });
     }
@@ -98,21 +86,16 @@ const uploadMultiple = async (req, res, next) => {
     const { taskId } = req.params;
 
     const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      include: {
-        project: {
-          include: {
-            members: { where: { userId: req.user.id } }
-          }
-        }
-      }
+      where: { id: taskId }
     });
 
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
-    const isMember = task.project.members.length > 0;
-    if (req.user.role !== 'SUPER_ADMIN' && !isMember) {
-      return res.status(403).json({ error: 'Not a project member' });
+    if (req.user.role !== 'SUPER_ADMIN') {
+      const membership = await prisma.projectMember.findFirst({
+        where: { projectId: task.projectId, userId: req.user.id }
+      });
+      if (!membership) return res.status(403).json({ error: 'Not a project member' });
     }
 
     const files = await Promise.all(
@@ -125,9 +108,6 @@ const uploadMultiple = async (req, res, next) => {
             path: file.filename,
             taskId,
             uploadedById: req.user.id
-          },
-          include: {
-            uploadedBy: { select: { id: true, name: true } }
           }
         })
       )
