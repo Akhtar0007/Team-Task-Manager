@@ -21,6 +21,28 @@ const getStats = async (req, res, next) => {
     }
 
     const projectIds = [...new Set(tasks.map(t => t.projectId))];
+    const assigneeIds = [...new Set(tasks.map(t => t.assigneeId).filter(Boolean))];
+    const [projects, assignees] = await Promise.all([
+      projectIds.length > 0
+        ? prisma.project.findMany({
+            where: { id: { in: projectIds } },
+            select: { id: true, name: true }
+          })
+        : [],
+      assigneeIds.length > 0
+        ? prisma.user.findMany({
+            where: { id: { in: assigneeIds } },
+            select: { id: true, name: true, email: true }
+          })
+        : []
+    ]);
+    const projectById = Object.fromEntries(projects.map(project => [project.id, project]));
+    const assigneeById = Object.fromEntries(assignees.map(user => [user.id, user]));
+    const hydrateTask = task => ({
+      ...task,
+      project: projectById[task.projectId] || { id: task.projectId, name: 'Unknown project' },
+      assignee: task.assigneeId ? assigneeById[task.assigneeId] || null : null
+    });
     const totalTasks = tasks.length;
     const tasksByStatus = {
       TODO: tasks.filter(t => t.status === 'TODO').length,
@@ -45,8 +67,8 @@ const getStats = async (req, res, next) => {
       overdueCount: overdueTasks.length,
       myTaskCount: myTasks.length,
       myOverdueCount: myOverdueTasks.length,
-      overdueTasks: overdueTasks.slice(0, 10),
-      myTasks: myTasks.slice(0, 10),
+      overdueTasks: overdueTasks.slice(0, 10).map(hydrateTask),
+      myTasks: myTasks.slice(0, 10).map(hydrateTask),
       projectCount: projectIds.length
     };
 
@@ -64,6 +86,14 @@ const getStats = async (req, res, next) => {
           orderBy: { createdAt: 'desc' }
         })
       ]);
+      const activityUserIds = [...new Set(recentActivities.map(log => log.userId).filter(Boolean))];
+      const activityUsers = activityUserIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: activityUserIds } },
+            select: { id: true, name: true, email: true }
+          })
+        : [];
+      const activityUserById = Object.fromEntries(activityUsers.map(user => [user.id, user]));
 
       const doneTasks = await prisma.task.findMany({
         where: { status: 'DONE' },
@@ -85,12 +115,19 @@ const getStats = async (req, res, next) => {
             select: { id: true, name: true, email: true }
           })
         : [];
+      const topPerformersById = Object.fromEntries(topPerformers.map(user => [user.id, user]));
 
       response.totalUsers = totalUsers;
       response.totalProjects = totalProjects;
       response.recentUsers = recentUsers;
-      response.recentActivities = recentActivities;
-      response.topPerformers = topPerformers;
+      response.recentActivities = recentActivities.map(log => ({
+        ...log,
+        user: activityUserById[log.userId] || { id: log.userId, name: 'Unknown user' }
+      }));
+      response.topPerformers = topPerformerIds.map(id => ({
+        ...topPerformersById[id],
+        _count: { assignedTasks: performerCounts[id] || 0 }
+      })).filter(user => user.id);
     }
 
     res.json(response);
