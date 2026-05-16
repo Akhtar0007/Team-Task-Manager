@@ -170,8 +170,14 @@ const search = async (req, res, next) => {
     if (status) where.status = status;
     if (priority) where.priority = priority;
     if (assigneeId) where.assigneeId = assigneeId;
+    let labelTaskIds;
     if (labelId) {
-      where.labels = { some: { labelId } };
+      const taskLabels = await prisma.taskLabel.findMany({
+        where: { labelId },
+        select: { taskId: true }
+      });
+      labelTaskIds = taskLabels.map(tl => tl.taskId);
+      where.id = { in: labelTaskIds };
     }
 
     if (req.user.role !== 'SUPER_ADMIN') {

@@ -36,13 +36,25 @@ const create = async (req, res, next) => {
 
 const getAll = async (req, res, next) => {
   try {
-    const where = req.user.role === 'SUPER_ADMIN' ? {} : { members: { some: { userId: req.user.id } } };
-    const projects = await prisma.project.findMany({
-      where,
-      orderBy: { createdAt: 'desc' }
-    });
+    let projectIds;
 
-    res.json(projects);
+    if (req.user.role === 'SUPER_ADMIN') {
+      const allProjects = await prisma.project.findMany({
+        orderBy: { createdAt: 'desc' }
+      });
+      return res.json(allProjects);
+    } else {
+      const memberships = await prisma.projectMember.findMany({
+        where: { userId: req.user.id },
+        select: { projectId: true }
+      });
+      projectIds = memberships.map(m => m.projectId);
+      const projects = await prisma.project.findMany({
+        where: { id: { in: projectIds } },
+        orderBy: { createdAt: 'desc' }
+      });
+      return res.json(projects);
+    }
   } catch (error) {
     next(error);
   }

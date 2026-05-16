@@ -65,15 +65,26 @@ const getStats = async (req, res, next) => {
         })
       ]);
 
-      const topPerformers = await prisma.user.findMany({
-        where: {
-          assignedTasks: { some: { status: 'DONE' } }
-        },
-        select: {
-          id: true, name: true, email: true
-        },
-        take: 5
+      const doneTasks = await prisma.task.findMany({
+        where: { status: 'DONE' },
+        select: { assigneeId: true }
       });
+      const performerCounts = {};
+      doneTasks.forEach(t => {
+        if (t.assigneeId) {
+          performerCounts[t.assigneeId] = (performerCounts[t.assigneeId] || 0) + 1;
+        }
+      });
+      const topPerformerIds = Object.entries(performerCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(e => e[0]);
+      const topPerformers = topPerformerIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: topPerformerIds } },
+            select: { id: true, name: true, email: true }
+          })
+        : [];
 
       response.totalUsers = totalUsers;
       response.totalProjects = totalProjects;
