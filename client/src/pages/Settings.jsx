@@ -1,11 +1,23 @@
+import { useState, useEffect } from 'react';
 import { useDarkMode } from '../context/DarkModeContext';
 import { useAuth } from '../context/AuthContext';
-import { Link, useNavigate } from 'react-router-dom';
+import { dashboard } from '../api/client';
 
 export default function Settings() {
   const { isDark, toggle } = useDarkMode();
   const { user } = useAuth();
-  const navigate = useNavigate();
+  const [stats, setStats] = useState(null);
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+
+  useEffect(() => {
+    if (isSuperAdmin) {
+      dashboard.getStats().then(({ data }) => setStats(data)).catch(() => {});
+    }
+  }, []);
+
+  const s = stats || {};
+  const recentActivities = s.recentActivities || [];
+  const recentUsers = s.recentUsers || [];
 
   return (
     <div className="max-w-2xl mx-auto space-y-6">
@@ -45,17 +57,51 @@ export default function Settings() {
         </div>
       </div>
 
-      <div className="text-center">
-        <button
-          onClick={() => navigate('/dashboard')}
-          className="text-sm text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 dark:hover:text-indigo-300 transition-colors inline-flex items-center space-x-1"
-        >
-          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg>
-          <span>Back to Dashboard</span>
-        </button>
-      </div>
+      {isSuperAdmin && (
+        <>
+          <div className="card card-dark p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h2>
+            {recentActivities.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500 italic">No recent activity</p>
+            ) : (
+              <div className="space-y-2">
+                {recentActivities.map((log) => (
+                  <div key={log.id} className="flex items-start space-x-3 text-sm p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-gray-700 dark:text-gray-300 truncate">{log.details || `${log.action} ${log.entity}`}</p>
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{log.user?.name || 'Unknown'} {log.createdAt ? `· ${new Date(log.createdAt).toLocaleString()}` : ''}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <div className="card card-dark p-6">
+            <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Signups</h2>
+            {recentUsers.length === 0 ? (
+              <p className="text-sm text-gray-400 dark:text-gray-500 italic">No recent signups</p>
+            ) : (
+              <div className="space-y-2">
+                {recentUsers.map((u) => (
+                  <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
+                        {u.name?.charAt(0)?.toUpperCase() || '?'}
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{u.name}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500">{u.email}</p>
+                      </div>
+                    </div>
+                    <span className="text-xs text-gray-400 dark:text-gray-500">{u.createdAt ? new Date(u.createdAt).toLocaleDateString() : ''}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }

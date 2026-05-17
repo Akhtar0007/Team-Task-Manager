@@ -1,6 +1,12 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const enrichConversation = async (conv) => {
+  const u1 = await prisma.user.findUnique({ where: { id: conv.participant1Id }, select: { id: true, name: true, email: true, role: true } });
+  const u2 = await prisma.user.findUnique({ where: { id: conv.participant2Id }, select: { id: true, name: true, email: true, role: true } });
+  return { ...conv, participant1: u1, participant2: u2 };
+};
+
 const startOrGetConversation = async (req, res, next) => {
   try {
     const { participantId } = req.body;
@@ -17,13 +23,13 @@ const startOrGetConversation = async (req, res, next) => {
       where: { participant1Id: p1, participant2Id: p2 }
     });
 
-    if (existing) return res.json(existing);
+    if (existing) return res.json(await enrichConversation(existing));
 
     const conversation = await prisma.conversation.create({
       data: { participant1Id: p1, participant2Id: p2 }
     });
 
-    res.status(201).json(conversation);
+    res.status(201).json(await enrichConversation(conversation));
   } catch (error) {
     next(error);
   }
@@ -41,10 +47,16 @@ const getMyConversations = async (req, res, next) => {
       orderBy: { updatedAt: 'desc' }
     });
 
-    res.json(conversations);
+    const enriched = await Promise.all(conversations.map(enrichConversation));
+    res.json(enriched);
   } catch (error) {
     next(error);
   }
+};
+
+const enrichMessage = async (msg) => {
+  const u = await prisma.user.findUnique({ where: { id: msg.userId }, select: { id: true, name: true, email: true, role: true } });
+  return { ...msg, user: u };
 };
 
 const getMessages = async (req, res, next) => {
@@ -68,7 +80,8 @@ const getMessages = async (req, res, next) => {
       take: 100
     });
 
-    res.json(messages);
+    const enriched = await Promise.all(messages.map(enrichMessage));
+    res.json(enriched);
   } catch (error) {
     next(error);
   }
@@ -99,7 +112,7 @@ const sendMessage = async (req, res, next) => {
       data: { updatedAt: new Date() }
     });
 
-    res.status(201).json(message);
+    res.status(201).json(await enrichMessage(message));
   } catch (error) {
     next(error);
   }

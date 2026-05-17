@@ -8,9 +8,16 @@ const isSuperAdmin = (req, res, next) => {
   next();
 };
 
+const isAdmin = (req, res, next) => {
+  if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'ADMIN') {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+};
+
 const isProjectAdmin = async (req, res, next) => {
   try {
-    if (req.user.role === 'SUPER_ADMIN') return next();
+    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') return next();
 
     const projectId = req.params.id || req.body.projectId;
     if (!projectId) return res.status(400).json({ error: 'Project ID required' });
@@ -31,7 +38,7 @@ const isProjectAdmin = async (req, res, next) => {
 
 const isProjectMember = async (req, res, next) => {
   try {
-    if (req.user.role === 'SUPER_ADMIN') return next();
+    if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') return next();
 
     const projectId = req.params.id || req.body.projectId;
     if (!projectId) return res.status(400).json({ error: 'Project ID required' });
@@ -51,4 +58,4 @@ const isProjectMember = async (req, res, next) => {
   }
 };
 
-module.exports = { isSuperAdmin, isProjectAdmin, isProjectMember };
+module.exports = { isSuperAdmin, isAdmin, isProjectAdmin, isProjectMember };

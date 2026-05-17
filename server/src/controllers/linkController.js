@@ -22,7 +22,7 @@ const create = async (req, res, next) => {
       if (!task) return res.status(404).json({ error: 'Task not found' });
       validProjectId = task.projectId;
 
-      if (req.user.role !== 'SUPER_ADMIN') {
+      if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'ADMIN') {
         const membership = await prisma.projectMember.findFirst({
           where: { projectId: task.projectId, userId: req.user.id }
         });
@@ -34,7 +34,7 @@ const create = async (req, res, next) => {
       const project = await prisma.project.findUnique({ where: { id: projectId } });
       if (!project) return res.status(404).json({ error: 'Project not found' });
 
-      if (req.user.role !== 'SUPER_ADMIN') {
+      if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'ADMIN') {
         const membership = await prisma.projectMember.findFirst({
           where: { projectId, userId: req.user.id }
         });
@@ -42,7 +42,7 @@ const create = async (req, res, next) => {
       }
     }
 
-    const isAdminForProject = req.user.role === 'SUPER_ADMIN' || await prisma.projectMember.findFirst({
+    const isAdminForProject = req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN' || await prisma.projectMember.findFirst({
       where: { projectId: validProjectId, userId: req.user.id, role: 'ADMIN' }
     });
     if (!isAdminForProject) {
@@ -103,7 +103,7 @@ const remove = async (req, res, next) => {
 
     if (!link) return res.status(404).json({ error: 'Link not found' });
 
-    let isAdmin = req.user.role === 'SUPER_ADMIN';
+    let isAdmin = req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN';
 
     if (!isAdmin && link.projectId) {
       const membership = await prisma.projectMember.findFirst({

@@ -35,7 +35,6 @@ export default function ProjectDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [isAdmin, setIsAdmin] = useState(false);
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
 
   const [showTaskForm, setShowTaskForm] = useState(false);
   const [taskForm, setTaskForm] = useState({ title: '', description: '', priority: 'MEDIUM', dueDate: '', assigneeId: '' });
@@ -67,8 +66,8 @@ export default function ProjectDetail() {
     try {
       const { data } = await projects.getById(id);
       setProject(data);
-      const myMembership = data.members.find(m => m.user.id === user?.id);
-      setIsAdmin(user?.role === 'SUPER_ADMIN' || myMembership?.role === 'ADMIN');
+      const myMembership = data.members?.find(m => m.user?.id === user?.id);
+      setIsAdmin(user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN' || myMembership?.role === 'ADMIN');
     } catch (err) {
       setError('Failed to load project');
     } finally {
@@ -374,7 +373,7 @@ export default function ProjectDetail() {
               <select value={filterAssignee} onChange={e => setFilterAssignee(e.target.value)} className="px-3 py-1.5 border border-gray-300 rounded-lg text-sm">
                 <option value="">All members</option>
                 {project.members.map(m => (
-                  <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
+                  <option key={m.user?.id} value={m.user?.id}>{m.user?.name || 'Unknown'}</option>
                 ))}
               </select>
             </div>
@@ -443,10 +442,10 @@ export default function ProjectDetail() {
                     className="px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   >
                     <option value="">Unassigned</option>
-                    {project.members.map(m => (
-                      <option key={m.user.id} value={m.user.id}>{m.user.name}</option>
-                    ))}
-                  </select>
+                {project.members.map(m => (
+                  <option key={m.user?.id} value={m.user?.id}>{m.user?.name || 'Unknown'}</option>
+                ))}
+              </select>
                 </div>
               </div>
               <div className="flex justify-end space-x-2 mt-4">
@@ -509,13 +508,13 @@ export default function ProjectDetail() {
                       )}
 
                       <div className="flex items-center space-x-4 mt-2 text-xs text-gray-400 ml-5">
-                        {task.assignee && <span>Assigned to: <span className="font-medium">{task.assignee.name}</span></span>}
+                        {task.assignee && <span>Assigned to: <span className="font-medium">{task.assignee?.name || 'Unknown'}</span></span>}
                         {task.dueDate && (
                           <span className={new Date(task.dueDate) < new Date() && task.status !== 'DONE' ? 'text-red-500 font-medium' : ''}>
                             Due: {new Date(task.dueDate).toLocaleDateString()}
                           </span>
                         )}
-                        <span>Created by: {task.createdBy.name}</span>
+                        <span>Created by: {task.createdBy?.name || 'Unknown'}</span>
                       </div>
 
                       {/* Expanded Content */}
@@ -547,7 +546,7 @@ export default function ProjectDetail() {
                                 {task.files.map(file => (
                                   <div key={file.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
                                     <a
-                                      href={`/uploads/${file.path}`}
+                                      href={`/api/files/download/${file.id}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs text-indigo-600 hover:underline truncate"
@@ -755,7 +754,7 @@ export default function ProjectDetail() {
                 {projectDocs.map(doc => (
                   <div key={doc.id} className="flex items-center justify-between bg-gray-50 rounded px-2 py-1">
                     <a
-                      href={`/uploads/${doc.path}`}
+                      href={`/api/documents/download/${doc.id}`}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-xs text-indigo-600 hover:underline truncate"
@@ -845,7 +844,7 @@ export default function ProjectDetail() {
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-lg font-semibold text-gray-800">Members ({project.members.length})</h2>
-              {isSuperAdmin && (
+              {isAdmin && (
                 <button onClick={() => setShowMemberForm(true)} className="text-indigo-600 text-sm font-medium hover:underline">+ Add</button>
               )}
             </div>
@@ -879,8 +878,8 @@ export default function ProjectDetail() {
               {project.members.map(member => (
                 <div key={member.id} className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-700">{member.user.name}</p>
-                    <p className="text-xs text-gray-400">{member.user.email}</p>
+                    <p className="text-sm font-medium text-gray-700">{member.user?.name || 'Unknown'}</p>
+                    <p className="text-xs text-gray-400">{member.user?.email || ''}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${
@@ -888,7 +887,7 @@ export default function ProjectDetail() {
                     }`}>
                       {member.role}
                     </span>
-                    {isSuperAdmin && member.role !== 'ADMIN' && (
+                    {isAdmin && member.role !== 'ADMIN' && (
                       <button onClick={() => handleRemoveMember(member.id)} className="text-red-500 text-xs hover:underline">Remove</button>
                     )}
                   </div>

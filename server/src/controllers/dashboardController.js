@@ -112,7 +112,7 @@ const getStats = async (req, res, next) => {
       const topPerformers = topPerformerIds.length > 0
         ? await prisma.user.findMany({
             where: { id: { in: topPerformerIds } },
-            select: { id: true, name: true, email: true }
+            select: { id: true, name: true }
           })
         : [];
       const topPerformersById = Object.fromEntries(topPerformers.map(user => [user.id, user]));

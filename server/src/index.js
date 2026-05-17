@@ -48,9 +48,6 @@ app.use('/api/documents', projectDocumentRoutes);
 app.use('/api/links', linkRoutes);
 app.use('/api/chat', chatRoutes);
 app.use('/api/dm', dmRoutes);
-const uploadsDir = path.join(__dirname, '../uploads');
-app.use('/uploads', express.static(uploadsDir));
-
 const clientDist = path.join(__dirname, '../../client/dist');
 app.use(express.static(clientDist));
 app.get('*', (req, res) => {

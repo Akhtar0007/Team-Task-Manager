@@ -46,22 +46,17 @@ export default function Dashboard() {
     DONE: 'bg-green-100 text-green-800',
   };
 
-  const myTasks = Array.isArray(stats.myTasks) ? stats.myTasks : [];
-  const overdueTasks = Array.isArray(stats.overdueTasks) ? stats.overdueTasks : [];
-  const topPerformers = Array.isArray(stats.topPerformers) ? stats.topPerformers : [];
-  const recentActivities = Array.isArray(stats.recentActivities) ? stats.recentActivities : [];
-  const recentUsers = Array.isArray(stats.recentUsers) ? stats.recentUsers : [];
-
+  const s = stats || {};
   const statCards = [
-    { label: 'Total Tasks', value: stats.totalTasks ?? 0, color: 'bg-blue-500' },
-    { label: 'To Do', value: stats.tasksByStatus.TODO ?? 0, color: 'bg-yellow-500' },
-    { label: 'In Progress', value: stats.tasksByStatus.IN_PROGRESS ?? 0, color: 'bg-indigo-500' },
-    { label: 'Review', value: stats.tasksByStatus.REVIEW ?? 0, color: 'bg-orange-500' },
-    { label: 'Completed', value: stats.tasksByStatus.DONE ?? 0, color: 'bg-green-500' },
-    { label: 'Overdue', value: stats.overdueCount ?? 0, color: 'bg-red-500' },
-    { label: 'My Tasks', value: stats.myTaskCount ?? 0, color: 'bg-purple-500' },
-    { label: 'My Overdue', value: stats.myOverdueCount ?? 0, color: 'bg-pink-500' },
-    { label: 'Projects', value: stats.projectCount ?? 0, color: 'bg-teal-500' },
+    { label: 'Total Tasks', value: s.totalTasks ?? 0, color: 'bg-blue-500' },
+    { label: 'To Do', value: s.tasksByStatus?.TODO ?? 0, color: 'bg-yellow-500' },
+    { label: 'In Progress', value: s.tasksByStatus?.IN_PROGRESS ?? 0, color: 'bg-indigo-500' },
+    { label: 'Review', value: s.tasksByStatus?.REVIEW ?? 0, color: 'bg-orange-500' },
+    { label: 'Completed', value: s.tasksByStatus?.DONE ?? 0, color: 'bg-green-500' },
+    { label: 'Overdue', value: s.overdueCount ?? 0, color: 'bg-red-500' },
+    { label: 'My Tasks', value: s.myTaskCount ?? 0, color: 'bg-purple-500' },
+    { label: 'My Overdue', value: s.myOverdueCount ?? 0, color: 'bg-pink-500' },
+    { label: 'Projects', value: s.projectCount ?? 0, color: 'bg-teal-500' },
   ];
 
   const actionIcon = {
@@ -104,63 +99,41 @@ export default function Dashboard() {
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-gradient-to-br from-indigo-500 to-indigo-700 rounded-xl p-5 text-white shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all duration-200 hover:-translate-y-0.5">
             <p className="text-sm text-indigo-100 font-medium">Total Users</p>
-            <p className="text-3xl font-bold mt-1">{stats.totalUsers}</p>
+            <p className="text-3xl font-bold mt-1">{s.totalUsers ?? 0}</p>
           </div>
           <div className="bg-gradient-to-br from-green-500 to-emerald-700 rounded-xl p-5 text-white shadow-lg shadow-green-500/20 hover:shadow-xl hover:shadow-green-500/30 transition-all duration-200 hover:-translate-y-0.5">
             <p className="text-sm text-green-100 font-medium">Total Projects</p>
-            <p className="text-3xl font-bold mt-1">{stats.totalProjects}</p>
+            <p className="text-3xl font-bold mt-1">{s.totalProjects ?? 0}</p>
           </div>
           <div className="bg-gradient-to-br from-indigo-500 to-purple-700 rounded-xl p-5 text-white shadow-lg shadow-indigo-500/20 hover:shadow-xl hover:shadow-indigo-500/30 transition-all duration-200 hover:-translate-y-0.5">
             <p className="text-sm text-indigo-100 font-medium">Total Tasks</p>
-            <p className="text-3xl font-bold mt-1">{stats.totalTasks}</p>
+            <p className="text-3xl font-bold mt-1">{s.totalTasks ?? 0}</p>
           </div>
           <div className="bg-gradient-to-br from-amber-500 to-orange-700 rounded-xl p-5 text-white shadow-lg shadow-amber-500/20 hover:shadow-xl hover:shadow-amber-500/30 transition-all duration-200 hover:-translate-y-0.5">
             <p className="text-sm text-amber-100 font-medium">Overdue Tasks</p>
-            <p className="text-3xl font-bold mt-1">{stats.overdueCount}</p>
+            <p className="text-3xl font-bold mt-1">{s.overdueCount ?? 0}</p>
           </div>
         </div>
       )}
 
       <div className="grid md:grid-cols-2 gap-6">
         <div className="space-y-6">
-          {myTasks.length > 0 && (
+          {(s.myTasks || []).length > 0 && (
             <div className="card card-dark p-6">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 dark:text-white">My Tasks</h2>
-                <span className="text-xs text-gray-400">{myTasks.length} tasks</span>
+                <span className="text-xs text-gray-400">{s.myTasks.length} tasks</span>
               </div>
               <div className="space-y-2">
-                {myTasks.map((task) => (
+                {s.myTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{task.title}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{task.project?.name || 'Unknown project'}</p>
                     </div>
                     <span className={`ml-2 px-2.5 py-1 text-xs font-medium rounded-full ${statusColor[task.status]}`}>
-                      {task.status.replace('_', ' ')}
+                      {task.status?.replace('_', ' ') || ''}
                     </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isSuperAdmin && topPerformers.length > 0 && (
-            <div className="card card-dark p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Top Performers</h2>
-              <div className="space-y-2">
-                {topPerformers.map((u, i) => (
-                  <div key={u.id} className="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${i === 0 ? 'bg-yellow-400 text-yellow-900' : i === 1 ? 'bg-gray-300 text-gray-700' : i === 2 ? 'bg-amber-600 text-white' : 'bg-gray-200 text-gray-500'}`}>
-                        {i + 1}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{u.name}</p>
-                        <p className="text-xs text-gray-400">{u.email}</p>
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold text-green-600 dark:text-green-400">{u._count?.assignedTasks ?? 0} done</span>
                   </div>
                 ))}
               </div>
@@ -169,14 +142,14 @@ export default function Dashboard() {
         </div>
 
         <div className="space-y-6">
-          {overdueTasks.length > 0 && (
+          {(s.overdueTasks || []).length > 0 && (
             <div className="card card-dark p-6 border-red-100 dark:border-red-900/50">
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-lg font-semibold text-red-700 dark:text-red-400">Overdue Tasks</h2>
-                <span className="text-xs text-red-500 font-medium">{overdueTasks.length} overdue</span>
+                <span className="text-xs text-red-500 font-medium">{s.overdueTasks.length} overdue</span>
               </div>
               <div className="space-y-2">
-                {overdueTasks.map((task) => (
+                {s.overdueTasks.map((task) => (
                   <div key={task.id} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-900/20 rounded-lg border border-red-100 dark:border-red-800/50">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-medium text-red-800 dark:text-red-300 truncate">{task.title}</p>
@@ -185,47 +158,8 @@ export default function Dashboard() {
                       </p>
                     </div>
                     <span className="text-xs text-red-500 dark:text-red-400 ml-2 font-medium">
-                      Due {new Date(task.dueDate).toLocaleDateString()}
+                      {task.dueDate ? `Due ${new Date(task.dueDate).toLocaleDateString()}` : ''}
                     </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isSuperAdmin && recentActivities.length > 0 && (
-            <div className="card card-dark p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Activity</h2>
-              <div className="space-y-1">
-                {recentActivities.map((log) => (
-                  <div key={log.id} className="flex items-start space-x-3 text-sm p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
-                    <span className="text-xs mt-0.5">{actionIcon[log.action] || '📋'}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-gray-700 dark:text-gray-300 truncate">{log.details || `${log.action} ${log.entity}`}</p>
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{log.user?.name || 'Unknown user'} · {new Date(log.createdAt).toLocaleString()}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {isSuperAdmin && recentUsers.length > 0 && (
-            <div className="card card-dark p-6">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">Recent Signups</h2>
-              <div className="space-y-2">
-                {recentUsers.map((u) => (
-                  <div key={u.id} className="flex items-center justify-between p-2 hover:bg-gray-50 dark:hover:bg-gray-700/50 rounded-lg transition-colors">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-indigo-600 flex items-center justify-center text-xs font-bold text-white">
-                        {u.name.charAt(0).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-700 dark:text-gray-300">{u.name}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500">{u.email}</p>
-                      </div>
-                    </div>
-                    <span className="text-xs text-gray-400 dark:text-gray-500">{new Date(u.createdAt).toLocaleDateString()}</span>
                   </div>
                 ))}
               </div>
@@ -234,7 +168,7 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {myTasks.length === 0 && overdueTasks.length === 0 && !isSuperAdmin && (
+      {(s.myTasks || []).length === 0 && (s.overdueTasks || []).length === 0 && !isSuperAdmin && (
         <div className="text-center py-16 card card-dark">
           <div className="max-w-sm mx-auto">
             <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-gray-100 dark:bg-gray-700 flex items-center justify-center">

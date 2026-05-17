@@ -13,7 +13,7 @@ const create = async (req, res, next) => {
     const { title, description, status, priority, dueDate, assigneeId } = req.body;
     const { projectId } = req.params;
 
-    if (req.user.role !== 'SUPER_ADMIN') {
+    if (req.user.role !== 'SUPER_ADMIN' && req.user.role !== 'ADMIN') {
       const membership = await prisma.projectMember.findFirst({
         where: { projectId, userId: req.user.id }
       });
@@ -64,7 +64,7 @@ const update = async (req, res, next) => {
     const task = await prisma.task.findUnique({ where: { id: req.params.id } });
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
-    let isAdmin = req.user.role === 'SUPER_ADMIN';
+    let isAdmin = req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN';
     let isAssignee = task.assigneeId === req.user.id;
 
     if (!isAdmin) {
